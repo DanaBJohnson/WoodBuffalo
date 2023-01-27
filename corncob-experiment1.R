@@ -13,11 +13,10 @@ library(dplyr)
 
 #setwd("C:/Users/danab/Box/WhitmanLab/Projects/WoodBuffalo/FireSim2019/")
 
+### CORNCOB TAKES RAW SEQ DATA AS INPUT ###
 
-# Corncob analysis for Manuscript: 
-# Input data -----
-#      Input to corncob is raw count data!
-
+### Step 1. Import relevant phyloseq data ----
+# Raw seqs
 ps.raw.full <- readRDS('data/sequence-data/LibCombined/phyloseq-objects/ps.raw.full')
 ps.raw.full
 
@@ -30,107 +29,134 @@ ps.raw.full <- prune_samples(sample_data(ps.raw.full)$Full.id != '19UW-WB-06-08-
                                sample_data(ps.raw.full)$Full.id != '19UW-WB-11-03-O-SI-duplicate'&
                                sample_data(ps.raw.full)$Full.id != '19UW-WB-19-07-A-SI-duplicate' &
                                sample_data(ps.raw.full)$Full.id != '19UW-WB-08-10-O-SI', ps.raw.full)
+ps.raw.full <- prune_taxa(taxa_sums(ps.raw.full)>0, ps.raw.full)
 
-
+# normalize abundance seq data
 ps.norm.full <- prune_samples(sample_data(ps.norm.full)$Full.id != '19UW-WB-06-08-A-SI-duplicate' &
                                 sample_data(ps.norm.full)$Full.id != '19UW-WB-07-02-O-SI-duplicate' &
                                 sample_data(ps.norm.full)$Full.id != '19UW-WB-11-03-O-SI-duplicate'&
                                 sample_data(ps.norm.full)$Full.id != '19UW-WB-19-07-A-SI-duplicate' &
                                 sample_data(ps.norm.full)$Full.id != '19UW-WB-08-10-O-SI', ps.norm.full)
-
-
-ps.raw.full <- prune_taxa(taxa_sums(ps.raw.full)>0, ps.raw.full)
 ps.norm.full <- prune_taxa(taxa_sums(ps.norm.full)>0, ps.norm.full)
 
-# Abundance cut off and Phylum level prep -----
-# subset raw data to include OTUs with a normalized relative abundance greater than some cutoff
-
-# Mean cut-off
-AbunTaxa = taxa_names(filter_taxa(ps.norm.full, function(x) mean(x) > 0.0001, TRUE))
-
-# Cutoff for rel. abundance MAXIMUM
-AbunTest <-  taxa_names(filter_taxa(ps.norm.full, function(x) max(x) > 0.005, TRUE))
-
-length(AbunTaxa)
-
-length(AbunTest)
-
-ntaxa(ps.norm.full)
-
-x <- c(AbunTaxa, AbunTest)
-length(x)
-
-x <- unique(x)
-length(x)
-
-# Prune taxa to include only OTUs with a maximum rel. abun > Cutoff
-#ps.prune.raw = prune_taxa(AbunTest, ps.raw.full)
-
-
-
-### EXPERIMENT 1 -----
-
-#     post-burn RNA data
+# Exclude all but 24 hr post-burn
+# Create separate genomic DNA and an RNA phyloseq objects
 ps.raw.RNA <- ps.raw.full %>%
   phyloseq::subset_samples(incub.trtmt %in% c('pb')) %>%
   subset_samples(DNA.type %in% c('cDNA')) 
 
+ps.raw.DNA <- ps.raw.full %>%
+  phyloseq::subset_samples(incub.trtmt %in% c('pb')) %>%
+  subset_samples(DNA.type %in% c('gDNA')) 
 
-# DRY BURNS -----
-#     Create Temp cutoff 
-ps.RNA.dry <-  prune_samples(sample_data(ps.raw.RNA)$burn.trtmt != 'wet', ps.raw.RNA)
 
-#    Create dataframe from ps.RNA.dry sample_data.
-df.dry <- data.frame(sample_data(ps.RNA.dry))
 
-#    Create temperature categories:
+### Step 2. Subset for the most abundance taxa for use in testing -----
+
+# Create list of taxa with a mean abundance greater than cut-off
+MeanAbunTaxa = taxa_names(filter_taxa(ps.norm.full, function(x) mean(x) > 0.0001, TRUE))
+length(MeanAbunTaxa)
+
+# Create list of taxa with max abundance greater than cutoff
+MaxAbunTaxa <-  taxa_names(filter_taxa(ps.norm.full, function(x) max(x) > 0.005, TRUE))
+length(MaxAbunTaxa)
+
+ntaxa(ps.norm.full)
+
+x <- c(MeanAbunTaxa, MaxAbunTaxa)
+length(unique(x))
+
+# Prune taxa to include only OTUs with a maximum rel. abun > Cutoff
+ps.prune.raw.DNA = prune_taxa(MaxAbunTaxa, ps.raw.DNA)
+
+
+
+### Step 3. Set temperature cutoff for dry soil burns -----
+# Focus on dry soil burns: 
+ps.DNA.dry <-  prune_samples(sample_data(ps.prune.raw.DNA)$burn.trtmt != 'wet', ps.prune.raw.DNA)
+
+# Create dataframe ps.DNA.dry sample_data.
+df.dry <- data.frame(sample_data(ps.DNA.dry))
+
+# Assign maximum temp at bottom thermocouple as the Max temp. for the core:
 df.dry <- df.dry %>%
   group_by(site) %>%
   mutate(Dry.burn.max = max(Thermo.low.max)) 
 
-#     Now combine the new sample data with the original phyloseq object:
+# Now combine the new sample data with the original phyloseq object:
 ps.df <- sample_data(df.dry)
 
 sample_names(ps.df) = df.dry$Full.id
 
-sample_data(ps.RNA.dry) <- ps.df
+sample_data(ps.DNA.dry) <- ps.df
 
 
 
 
+### Step 4. Run corncob on O and A horizons -----
 
-# 1. Dry Vs. Control; O horizon; Low thermo > 50 C -----
-ps.corncob.dry.O.gt50 <-  prune_samples(sample_data(ps.RNA.dry)$horizon == 'O' & 
-                                          sample_data(ps.RNA.dry)$Dry.burn.max>50, ps.RNA.dry)
-
+# Create O horizon phyloseq object
+ps.corncob.dry.O.gt50 <-  prune_samples(sample_data(ps.DNA.dry)$horizon == 'O' & 
+                                          sample_data(ps.DNA.dry)$Dry.burn.max>50, ps.DNA.dry)
+# Clean up ps to reduce size
 ps.corncob.dry.O.gt50 <- prune_taxa(taxa_sums(ps.corncob.dry.O.gt50)>0, ps.corncob.dry.O.gt50)
-
 ps.corncob.dry.O.gt50
 
+# How many samples make it through?
 sample_names(ps.corncob.dry.O.gt50)
-# Result 
+# Results in 25 samples (some of the dry soils burns don't make the 50C cutoff)
 
-# Run corncob:
-dt.RNA.DryBurn.O.gt50 <- differentialTest(formula = ~burn.trtmt+cntl.pH,
-                                           phi.formula = ~ burn.trtmt+cntl.pH,
-                                           formula_null = ~ cntl.pH,
-                                           phi.formula_null = ~burn.trtmt+ cntl.pH,
-                                           test = 'Wald',boot=FALSE,
-                                           data=ps.corncob.dry.O.gt50,
-                                           fdr_cutoff = 0.05)
+# Run corncob controlling for pre-burn pH (cntl.pH)
+dt.DNA.DryBurn.O.gt50 <- differentialTest(formula = ~burn.trtmt+cntl.pH,
+                                          phi.formula = ~ burn.trtmt+cntl.pH,
+                                          formula_null = ~ cntl.pH,
+                                          phi.formula_null = ~burn.trtmt+ cntl.pH,
+                                          test = 'Wald',boot=FALSE,
+                                          data=ps.corncob.dry.O.gt50,
+                                          fdr_cutoff = 0.05)
 
+
+
+# Repeat for A horizon:
+ps.corncob.dry.A.gt50 <-  prune_samples(sample_data(ps.DNA.dry)$horizon == 'A' & 
+                                          sample_data(ps.DNA.dry)$Dry.burn.max>50, ps.DNA.dry)
+# Clean up ps to reduce size
+ps.corncob.dry.A.gt50 <- prune_taxa(taxa_sums(ps.corncob.dry.A.gt50)>0, ps.corncob.dry.A.gt50)
+ps.corncob.dry.A.gt50
+
+# How many samples make it through?
+sample_names(ps.corncob.dry.A.gt50)
+# Results in 17 samples (not all cores have A horizons AND some of the dry soils 
+#     burns don't make the 50C cutoff)
+
+# Run corncob controlling for pre-burn pH (cntl.pH)
+dt.DNA.DryBurn.A.gt50 <- differentialTest(formula = ~burn.trtmt+cntl.pH,
+                                          phi.formula = ~ burn.trtmt+cntl.pH,
+                                          formula_null = ~ cntl.pH,
+                                          phi.formula_null = ~burn.trtmt+ cntl.pH,
+                                          test = 'Wald',boot=FALSE,
+                                          data=ps.corncob.dry.A.gt50,
+                                          fdr_cutoff = 0.05)
+
+
+
+
+### Step 5. Clean up corncob output -----
+# Create empty dataframes to fill
 df.Dry.O.gt50 = data.frame()
+df.Dry.A.gt50 = data.frame()
+
 
 # Loop to pull out coefficients for each taxon
-for (j in 1:length(dt.RNA.DryBurn.O.gt50$significant_taxa)){
+for (j in 1:length(dt.DNA.DryBurn.O.gt50$significant_taxa)){
   # Get the significant model for that taxon
-  sig_models = dt.RNA.DryBurn.O.gt50$significant_models[[j]]
+  sig_models = dt.DNA.DryBurn.O.gt50$significant_models[[j]]
   # Pull out the coefficients as above
   # NOTE: you have to make sure the row reference is correct, as determined above
   # Here we have it as 7.
   mu_dry = data.frame(t(as.matrix(sig_models$coefficients[2,])))
   # Also grab the p_fdr estimate for that taxon's model
-  p_fdr = dt.RNA.DryBurn.O.gt50$p_fdr[dt.RNA.DryBurn.O.gt50$significant_taxa][j]
+  p_fdr = dt.DNA.DryBurn.O.gt50$p_fdr[dt.DNA.DryBurn.O.gt50$significant_taxa][j]
   # Add that estimate onto our coefficient data frame
   mu_dry$p_fdr = p_fdr
   # Create a column with the OTU ID
@@ -140,52 +166,31 @@ for (j in 1:length(dt.RNA.DryBurn.O.gt50$significant_taxa)){
   df.Dry.O.gt50 = rbind(df.Dry.O.gt50,mu_dry)
 }
 
+# Fill in relavent information for later analyses:
 df.Dry.O.gt50$Comparison = 'pb.dry.v.pb.control'
 df.Dry.O.gt50$Experiment = 'survival'
 df.Dry.O.gt50$Temp.Cutoff = 'Low thermo greater than 50 C'
 df.Dry.O.gt50$pH.cutoff = 'null'
 df.Dry.O.gt50$horizon = 'O'
+df.Dry.O.gt50$DNA.type = 'gDNA'
+df.Dry.O.gt50$Controlling.for = 'pre-burn pH'
 
 colnames(df.Dry.O.gt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                            'Experiment', 'Temp.cutoff','pH.cutoff','horizon')
+                            'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                            'DNA.type', 'Controlling.for')
 
 
-
-
-# 2. Dry Vs. Control; A horizon; Low thermo > 50 C -----
-ps.corncob.dry.A.gt50 <-  prune_samples(sample_data(ps.RNA.dry)$horizon == 'A' & 
-                                         sample_data(ps.RNA.dry)$Dry.burn.max>50, ps.RNA.dry)
-
-ps.corncob.dry.A.gt50 <- prune_taxa(taxa_sums(ps.corncob.dry.A.gt50)>0, ps.corncob.dry.A.gt50)
-ps.corncob.dry.A.gt50
-
-sample_names(ps.corncob.dry.A.gt50)
-# Result = 23 samples, 13 sites.
-#      11-10-A = dry, no corresponding control A horizon
-#      14-07-A = dry, no corresponding control A horizon
-#      15-09-A = control, no corresponding dry A horizon 
-
-# Run corncob
-dt.RNA.DryBurn.A.gt50 <- differentialTest(formula = ~burn.trtmt+cntl.pH,
-                                          phi.formula = ~ burn.trtmt+cntl.pH,
-                                          formula_null = ~ cntl.pH,
-                                          phi.formula_null = ~burn.trtmt+ cntl.pH,
-                                          test = 'Wald',boot=FALSE,
-                                          data=ps.corncob.dry.A.gt50,
-                                          fdr_cutoff = 0.05)
-
-df.Dry.A.gt50 = data.frame()
-
+# REPEAT FOR A HORIZON:
 # Loop to pull out coefficients for each taxon
-for (j in 1:length(dt.RNA.DryBurn.A.gt50$significant_taxa)){
+for (j in 1:length(dt.DNA.DryBurn.A.gt50$significant_taxa)){
   # Get the significant model for that taxon
-  sig_models = dt.RNA.DryBurn.A.gt50$significant_models[[j]]
+  sig_models = dt.DNA.DryBurn.A.gt50$significant_models[[j]]
   # Pull out the coefficients as above
   # NOTE: you have to make sure the row reference is correct, as determined above
   # Here we have it as 7.
   mu_dry = data.frame(t(as.matrix(sig_models$coefficients[2,])))
   # Also grab the p_fdr estimate for that taxon's model
-  p_fdr = dt.RNA.DryBurn.A.gt50$p_fdr[dt.RNA.DryBurn.A.gt50$significant_taxa][j]
+  p_fdr = dt.DNA.DryBurn.A.gt50$p_fdr[dt.DNA.DryBurn.A.gt50$significant_taxa][j]
   # Add that estimate onto our coefficient data frame
   mu_dry$p_fdr = p_fdr
   # Create a column with the OTU ID
@@ -195,383 +200,21 @@ for (j in 1:length(dt.RNA.DryBurn.A.gt50$significant_taxa)){
   df.Dry.A.gt50 = rbind(df.Dry.A.gt50,mu_dry)
 }
 
+# Fill in relavent information for later analyses:
 df.Dry.A.gt50$Comparison = 'pb.dry.v.pb.control'
 df.Dry.A.gt50$Experiment = 'survival'
 df.Dry.A.gt50$Temp.Cutoff = 'Low thermo greater than 50 C'
 df.Dry.A.gt50$pH.cutoff = 'null'
 df.Dry.A.gt50$horizon = 'A'
+df.Dry.A.gt50$DNA.type = 'gDNA'
+df.Dry.A.gt50$Controlling.for = 'pre-burn pH'
 
 colnames(df.Dry.A.gt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                            'Experiment', 'Temp.cutoff','pH.cutoff','horizon')
+                            'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                            'DNA.type', 'Controlling.for')
 
 
-
-# 3. Dry Vs. Control; O horizon; Low thermo < 50 C -----
-ps.corncob.dry.O.lt50 <-  prune_samples(sample_data(ps.RNA.dry)$horizon == 'O' & 
-                                          sample_data(ps.RNA.dry)$Dry.burn.max<50, ps.RNA.dry)
-
-ps.corncob.dry.O.lt50 <- prune_taxa(taxa_sums(ps.corncob.dry.O.lt50)>0, ps.corncob.dry.O.lt50)
-ps.corncob.dry.O.lt50
-
-sample_names(ps.corncob.dry.O.lt50)
-# Result = 5 samples, 3 sites 
-#      08-05-O is a control core with no corresponding dry burn (failed RNA extraction)
-
-# Run corncob
-dt.RNA.DryBurn.O.lt50 <- differentialTest(formula = ~burn.trtmt+cntl.pH,
-                                          phi.formula = ~ burn.trtmt+cntl.pH,
-                                          formula_null = ~ cntl.pH,
-                                          phi.formula_null = ~burn.trtmt+ cntl.pH,
-                                          test = 'Wald',boot=FALSE,
-                                          data=ps.corncob.dry.O.lt50,
-                                          fdr_cutoff = 0.05)
-#     All models failed to converge at temp cutoff of <50C
-
-
-df.Dry.O.lt50 = data.frame()
-
-
-# Loop to pull out coefficients for each taxon
-for (j in 1:length(dt.RNA.DryBurn.O.lt50$significant_taxa)){
-  # Get the significant model for that taxon
-  sig_models = dt.RNA.DryBurn.O.lt50$significant_models[[j]]
-  # Pull out the coefficients as above
-  # NOTE: you have to make sure the row reference is correct, as determined above
-  # Here we have it as 7.
-  mu_dry = data.frame(t(as.matrix(sig_models$coefficients[2,])))
-  # Also grab the p_fdr estimate for that taxon's model
-  p_fdr = dt.RNA.DryBurn.O.lt50$p_fdr[dt.RNA.DryBurn.O.lt50$significant_taxa][j]
-  # Add that estimate onto our coefficient data frame
-  mu_dry$p_fdr = p_fdr
-  # Create a column with the OTU ID
-  mu_dry$OTU= paste(row.names(data.frame(p_fdr)))
-  # Add this row onto the df dataframe, which will collect the results
-  # for all taxa as it iterates through this loop.
-  df.Dry.O.lt50 = rbind(df.Dry.O.lt50,mu_dry)
-}
-
-df.Dry.O.lt50$Comparison = 'pb.dry.v.pb.control'
-df.Dry.O.lt50$Experiment = 'survival'
-df.Dry.O.lt50$Temp.Cutoff = 'Low thermo less than 50 C'
-df.Dry.O.lt50$pH.cutoff = 'null'
-df.Dry.O.lt50$horizon = 'O'
-
-colnames(df.Dry.O.lt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                            'Experiment', 'Temp.cutoff','pH.cutoff','horizon')
-
-
-
-
-# 4. Dry Vs. Control; A horizon; Low thermo < 50 C -----
-
-ps.corncob.dry.A.lt50 <-  prune_samples(sample_data(ps.RNA.dry)$horizon == 'A' & 
-                                          sample_data(ps.RNA.dry)$Dry.burn.max<50, ps.RNA.dry)
-
-ps.corncob.dry.A.lt50 <- prune_taxa(taxa_sums(ps.corncob.dry.A.lt50)>0, ps.corncob.dry.A.lt50)
-
-(ps.corncob.dry.A.lt50)
-# Result = 1 sample, 1 site
-#      04-03-A = dry, no corresponding control A horizon
-
-# Run corncob
-dt.RNA.DryBurn.A.lt50 <- differentialTest(formula = ~burn.trtmt+cntl.pH,
-                                          phi.formula = ~ burn.trtmt+cntl.pH,
-                                          formula_null = ~ cntl.pH,
-                                          phi.formula_null = ~burn.trtmt+ cntl.pH,
-                                          test = 'Wald',boot=FALSE,
-                                          data=ps.corncob.dry.A.lt50,
-                                          fdr_cutoff = 0.05)
-#     All models failed to converge at temp cutoff of <50C
-
-df.Dry.A.lt50 = data.frame()
-
-# Loop to pull out coefficients for each taxon
-for (j in 1:length(dt.RNA.DryBurn.A.lt50$significant_taxa)){
-  # Get the significant model for that taxon
-  sig_models = dt.RNA.DryBurn.A.lt50$significant_models[[j]]
-  # Pull out the coefficients as above
-  # NOTE: you have to make sure the row reference is correct, as determined above
-  # Here we have it as 7.
-  mu_dry = data.frame(t(as.matrix(sig_models$coefficients[2,])))
-  # Also grab the p_fdr estimate for that taxon's model
-  p_fdr = dt.RNA.DryBurn.A.lt50$p_fdr[dt.RNA.DryBurn.A.lt50$significant_taxa][j]
-  # Add that estimate onto our coefficient data frame
-  mu_dry$p_fdr = p_fdr
-  # Create a column with the OTU ID
-  mu_dry$OTU= paste(row.names(data.frame(p_fdr)))
-  # Add this row onto the df dataframe, which will collect the results
-  # for all taxa as it iterates through this loop.
-  df.Dry.A.lt50 = rbind(df.Dry.A.lt50,mu_dry)
-}
-
-df.Dry.A.lt50$Comparison = 'pb.dry.v.pb.control'
-df.Dry.A.lt50$Experiment = 'survival'
-df.Dry.A.lt50$Temp.Cutoff = 'Low thermo less than 50 C'
-df.Dry.A.lt50$pH.cutoff = 'null'
-df.Dry.A.lt50$horizon = 'A'
-
-colnames(df.Dry.A.lt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                            'Experiment', 'Temp.cutoff','pH.cutoff','horizon')
-
-
-
-
-# Combine 1-4 -----
-df.joined.dry <- rbind(df.Dry.O.gt50, df.Dry.A.gt50,
-                       df.Dry.O.lt50, df.Dry.A.lt50)
-
-
-### WET BURNS: -----
-
-ps.RNA.wet <-  prune_samples(sample_data(ps.raw.RNA)$burn.trtmt != 'dry', ps.raw.RNA)
-
-#    Create dataframe from ps.RNA.wet sample_data.
-df.wet <- data.frame(sample_data(ps.RNA.wet))
-
-#    Create temperature categories:
-df.wet <- df.wet %>%
-  group_by(site) %>%
-  mutate(Wet.burn.max = max(Thermo.low.max)) 
-
-#     Now combine the new sample data with the original phyloseq object:
-ps.df <- sample_data(df.wet)
-
-sample_names(ps.df) = df.wet$Full.id
-
-sample_data(ps.RNA.wet) <- ps.df
-
-
-# 1. Wet Vs. Control; O horizon; Low thermo > 50 C -----
-
-ps.corncob.wet.O.gt50 <-  prune_samples(sample_data(ps.RNA.wet)$horizon == 'O' & 
-                                          sample_data(ps.RNA.wet)$Wet.burn.max>50, ps.RNA.wet)
-
-ps.corncob.wet.O.gt50 <- prune_taxa(taxa_sums(ps.corncob.wet.O.gt50)>0, ps.corncob.wet.O.gt50)
-ps.corncob.wet.O.gt50
-
-sample_names(ps.corncob.wet.O.gt50)
-# Result = 0 samples
-
-# Run corncob:
-dt.RNA.wetBurn.O.gt50 <- differentialTest(formula = ~burn.trtmt+cntl.pH,
-                                          phi.formula = ~ burn.trtmt+cntl.pH,
-                                          formula_null = ~ cntl.pH,
-                                          phi.formula_null = ~burn.trtmt+ cntl.pH,
-                                          test = 'Wald',boot=FALSE,
-                                          data=ps.corncob.wet.O.gt50,
-                                          fdr_cutoff = 0.05)
-# Notes: 
-
-df.wet.O.gt50 = data.frame()
-
-# Loop to pull out coefficients for each taxon
-for (j in 1:length(dt.RNA.wetBurn.O.gt50$significant_taxa)){
-  # Get the significant model for that taxon
-  sig_models = dt.RNA.wetBurn.O.gt50$significant_models[[j]]
-  # Pull out the coefficients as above
-  # NOTE: you have to make sure the row reference is correct, as determined above
-  # Here we have it as 7.
-  mu_dry = data.frame(t(as.matrix(sig_models$coefficients[2,])))
-  # Also grab the p_fdr estimate for that taxon's model
-  p_fdr = dt.RNA.wetBurn.O.gt50$p_fdr[dt.RNA.wetBurn.O.gt50$significant_taxa][j]
-  # Add that estimate onto our coefficient data frame
-  mu_dry$p_fdr = p_fdr
-  # Create a column with the OTU ID
-  mu_dry$OTU= paste(row.names(data.frame(p_fdr)))
-  # Add this row onto the df dataframe, which will collect the results
-  # for all taxa as it iterates through this loop.
-  df.wet.O.gt50 = rbind(df.wet.O.gt50,mu_dry)
-}
-
-df.wet.O.gt50$Comparison = 'pb.wet.v.pb.control'
-df.wet.O.gt50$Experiment = 'survival'
-df.wet.O.gt50$Temp.Cutoff = 'Low thermo greater than 50 C'
-df.wet.O.gt50$pH.cutoff = 'null'
-df.wet.O.gt50$horizon = 'O'
-
-colnames(df.wet.O.gt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                            'Experiment', 'Temp.cutoff','pH.cutoff','horizon')
-
-
-
-
-# 2.  Wet Vs. Control; A horizon; Low thermo > 50 C -----
-ps.corncob.wet.A.gt50 <-  prune_samples(sample_data(ps.RNA.wet)$horizon == 'A' & 
-                                          sample_data(ps.RNA.wet)$Wet.burn.max>50, ps.RNA.wet)
-
-ps.corncob.wet.A.gt50 <- prune_taxa(taxa_sums(ps.corncob.wet.A.gt50)>0, ps.corncob.wet.A.gt50)
-ps.corncob.wet.A.gt50
-
-sample_names(ps.corncob.wet.A.gt50)
-# Result = 0 samples
-
-
-# Run corncob
-dt.RNA.wetBurn.A.gt50 <- differentialTest(formula = ~burn.trtmt+cntl.pH,
-                                          phi.formula = ~ burn.trtmt+cntl.pH,
-                                          formula_null = ~ cntl.pH,
-                                          phi.formula_null = ~burn.trtmt+ cntl.pH,
-                                          test = 'Wald',boot=FALSE,
-                                          data=ps.corncob.wet.A.gt50,
-                                          fdr_cutoff = 0.05)
-# Notes: 
-df.wet.A.gt50 = data.frame()
-
-# Loop to pull out coefficients for each taxon
-for (j in 1:length(dt.RNA.wetBurn.A.gt50$significant_taxa)){
-  # Get the significant model for that taxon
-  sig_models = dt.RNA.wetBurn.A.gt50$significant_models[[j]]
-  # Pull out the coefficients as above
-  # NOTE: you have to make sure the row reference is correct, as determined above
-  # Here we have it as 7.
-  mu_dry = data.frame(t(as.matrix(sig_models$coefficients[2,])))
-  # Also grab the p_fdr estimate for that taxon's model
-  p_fdr = dt.RNA.wetBurn.A.gt50$p_fdr[dt.RNA.wetBurn.A.gt50$significant_taxa][j]
-  # Add that estimate onto our coefficient data frame
-  mu_dry$p_fdr = p_fdr
-  # Create a column with the OTU ID
-  mu_dry$OTU= paste(row.names(data.frame(p_fdr)))
-  # Add this row onto the df dataframe, which will collect the results
-  # for all taxa as it iterates through this loop.
-  df.wet.A.gt50 = rbind(df.wet.A.gt50,mu_dry)
-}
-
-df.wet.A.gt50$Comparison = 'pb.wet.v.pb.control'
-df.wet.A.gt50$Experiment = 'survival'
-df.wet.A.gt50$Temp.Cutoff = 'Low thermo greater than 50 C'
-df.wet.A.gt50$pH.cutoff = 'null'
-df.wet.A.gt50$horizon = 'A'
-
-colnames(df.wet.A.gt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                            'Experiment', 'Temp.cutoff','pH.cutoff','horizon')
-
-
-
-# 3.  Wet Vs. Control; O horizon; Low thermo < 50 C -----
-ps.corncob.wet.O.lt50 <-  prune_samples(sample_data(ps.RNA.wet)$horizon == 'O' & 
-                                          sample_data(ps.RNA.wet)$Wet.burn.max<50, ps.RNA.wet)
-
-ps.corncob.wet.O.lt50 <- prune_taxa(taxa_sums(ps.corncob.wet.O.lt50)>0, ps.corncob.wet.O.lt50)
-ps.corncob.wet.O.lt50
-
-sample_names(ps.corncob.wet.O.lt50)
-# Result = 38 samples, 19 sites
-
-# Run corncob
-dt.RNA.wetBurn.O.lt50 <- differentialTest(formula = ~burn.trtmt+cntl.pH,
-                                          phi.formula = ~ burn.trtmt+cntl.pH,
-                                          formula_null = ~ cntl.pH,
-                                          phi.formula_null = ~burn.trtmt+ cntl.pH,
-                                          test = 'Wald',boot=FALSE,
-                                          data=ps.corncob.wet.O.lt50,
-                                          fdr_cutoff = 0.05)
-# Notes:  
-
-
-df.wet.O.lt50 = data.frame()
-
-
-# Loop to pull out coefficients for each taxon
-for (j in 1:length(dt.RNA.wetBurn.O.lt50$significant_taxa)){
-  # Get the significant model for that taxon
-  sig_models = dt.RNA.wetBurn.O.lt50$significant_models[[j]]
-  # Pull out the coefficients as above
-  # NOTE: you have to make sure the row reference is correct, as determined above
-  # Here we have it as 7.
-  mu_dry = data.frame(t(as.matrix(sig_models$coefficients[2,])))
-  # Also grab the p_fdr estimate for that taxon's model
-  p_fdr = dt.RNA.wetBurn.O.lt50$p_fdr[dt.RNA.wetBurn.O.lt50$significant_taxa][j]
-  # Add that estimate onto our coefficient data frame
-  mu_dry$p_fdr = p_fdr
-  # Create a column with the OTU ID
-  mu_dry$OTU= paste(row.names(data.frame(p_fdr)))
-  # Add this row onto the df dataframe, which will collect the results
-  # for all taxa as it iterates through this loop.
-  df.wet.O.lt50 = rbind(df.wet.O.lt50,mu_dry)
-}
-
-df.wet.O.lt50$Comparison = 'pb.wet.v.pb.control'
-df.wet.O.lt50$Experiment = 'survival'
-df.wet.O.lt50$Temp.Cutoff = 'Low thermo less than 50 C'
-df.wet.O.lt50$pH.cutoff = 'null'
-df.wet.O.lt50$horizon = 'O'
-
-colnames(df.wet.O.lt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                            'Experiment', 'Temp.cutoff','pH.cutoff','horizon')
-
-
-
-
-# 4.  Wet Vs. Control; A horizon; Low thermo < 50 C -----
-ps.corncob.wet.A.lt50 <-  prune_samples(sample_data(ps.RNA.wet)$horizon == 'A' & 
-                                          sample_data(ps.RNA.wet)$Wet.burn.max<50, ps.RNA.wet)
-
-ps.corncob.wet.A.lt50 <- prune_taxa(taxa_sums(ps.corncob.wet.A.lt50)>0, ps.corncob.wet.A.lt50)
-ps.corncob.wet.A.lt50
-
-sample_names(ps.corncob.wet.A.lt50)
-# Result = 23 samples, thirteen sites:
-# 11-03-A 
-# 14-04-A
-# 15-09-A
-
-# Run corncob
-dt.RNA.wetBurn.A.lt50 <- differentialTest(formula = ~burn.trtmt+cntl.pH,
-                                          phi.formula = ~ burn.trtmt+cntl.pH,
-                                          formula_null = ~ cntl.pH,
-                                          phi.formula_null = ~burn.trtmt+ cntl.pH,
-                                          test = 'Wald',boot=FALSE,
-                                          data=ps.corncob.wet.A.lt50,
-                                          fdr_cutoff = 0.05)
-# Notes:  
-
-
-df.wet.A.lt50 = data.frame()
-
-# Loop to pull out coefficients for each taxon
-for (j in 1:length(dt.RNA.wetBurn.A.lt50$significant_taxa)){
-  # Get the significant model for that taxon
-  sig_models = dt.RNA.wetBurn.A.lt50$significant_models[[j]]
-  # Pull out the coefficients as above
-  # NOTE: you have to make sure the row reference is correct, as determined above
-  # Here we have it as 7.
-  mu_dry = data.frame(t(as.matrix(sig_models$coefficients[2,])))
-  # Also grab the p_fdr estimate for that taxon's model
-  p_fdr = dt.RNA.wetBurn.A.lt50$p_fdr[dt.RNA.wetBurn.A.lt50$significant_taxa][j]
-  # Add that estimate onto our coefficient data frame
-  mu_dry$p_fdr = p_fdr
-  # Create a column with the OTU ID
-  mu_dry$OTU= paste(row.names(data.frame(p_fdr)))
-  # Add this row onto the df dataframe, which will collect the results
-  # for all taxa as it iterates through this loop.
-  df.wet.A.lt50 = rbind(df.wet.A.lt50,mu_dry)
-}
-
-df.wet.A.lt50$Comparison = 'pb.wet.v.pb.control'
-df.wet.A.lt50$Experiment = 'survival'
-df.wet.A.lt50$Temp.Cutoff = 'Low thermo less than 50 C'
-df.wet.A.lt50$pH.cutoff = 'null'
-df.wet.A.lt50$horizon = 'A'
-
-colnames(df.wet.A.lt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                            'Experiment', 'Temp.cutoff','pH.cutoff','horizon')
-
-
-
-
-
-# Combined 1-4 -----
-df.joined.wet <- rbind(df.wet.O.gt50, df.wet.A.gt50,
-                       df.wet.O.lt50, df.wet.A.lt50)
-
-# Combine dry and wet -----
-
-head(df.joined.dry)
-head(df.joined.wet)
-
-df.joined <- rbind(df.joined.dry, df.joined.wet)
-
-
+df.joined <- rbind(df.Dry.O.gt50, df.Dry.A.gt50)
 
 # Let's bring back in our taxonomy from the tax table
 SigOTUs = levels(as.factor(df.joined$OTU))
@@ -582,10 +225,49 @@ df.joined = merge(df.joined,taxtab,by=c("OTU"))
 head(df.joined)
 
 
-# May want to save at this point
-write.csv(df.joined,"data/sequence-data/LibCombined/corncob-output/OTU level/All_taxa/Ex1 Fire survival/low-thermo-cutoff-50C.csv", row.names = FALSE)
 
-#otu_to_taxonomy(OTU = dt.RNA.wetBurn.A.lt50$significant_taxa, data = ps.RNA.wet)
+### Step 6. Pull out "Survivors" with an RNA:DNA ratio > [cutoff] -----
+
+# Subset ps.norm by list of survivor OTUs
+ps.norm.prune <- prune_taxa(taxa_names(ps.norm.full) %in% df.joined$OTU, ps.norm.full)
+
+# Create separate dataframes for RNA  (cDNA) and genomic DNA 
+df.norm.prune <- psmelt(ps.norm.prune)
+
+df.DNA.prune <- df.norm.prune %>%
+  subset(DNA.type == 'gDNA') %>%
+  subset(select = c(OTU, core.id.hor.incub, Abundance))
+
+df.RNA.prune <- df.norm.prune %>%
+  subset(DNA.type == 'cDNA') %>%
+  subset(select = c(OTU, core.id.hor.incub, Abundance))
+
+# Change abundance column heading 
+colnames(df.DNA.prune)[3] = 'Abun.DNA'
+colnames(df.RNA.prune)[3] = 'Abun.RNA'
+
+# Merge dataframes
+df.merge <- merge(df.DNA.prune, df.RNA.prune, by = c('OTU','core.id.hor.incub'))
+
+# Calculate RNA:DNA ratio
+df.ratio <- df.merge %>%
+  mutate(RNA.DNA.ratio = Abun.RNA/Abun.DNA) %>%
+  # SUbset survivor list to include only OTUs with ratio > [cutoff]
+  subset(RNA.DNA.ratio > 1)
+
+
+# Prune survivors to include only OTUs meeting RNA:DNA ratio [cutoff]
+length(unique(df.ratio$OTU))
+
+df.joined.prune <- df.joined %>%
+  subset(OTU %in% df.ratio$OTU)
+
+
+
+### Step 7. Save results -----
+
+write.csv(df.joined.prune,"data/sequence-data/LibCombined/corncob-output/OTU level/All_taxa/Ex1 Fire survival/gDNA-Temp-cutoff-50C.csv", row.names = FALSE)
+
+otu_to_taxonomy(OTU = dt.RNA.wetBurn.A.lt50$significant_taxa, data = ps.RNA.wet)
 #plot(dt.RNA.wetBurn.A.lt50, level = c('Phylum'))
-
 
