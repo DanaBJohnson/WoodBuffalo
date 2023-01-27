@@ -10,16 +10,19 @@ library(phyloseq)
 library(magrittr)
 library(dplyr)
 
-# Input data -----
-#      Input to corncob is raw count data!
+#setwd("C:/Users/danab/Box/WhitmanLab/Projects/WoodBuffalo/FireSim2019/")
 
+### CORNCOB TAKES RAW SEQ DATA AS INPUT ###
+
+### Step 1. Import relevant phyloseq data ----
+# Raw seqs
 ps.raw.full <- readRDS('data/sequence-data/LibCombined/phyloseq-objects/ps.raw.full')
 ps.raw.full
 
 ps.norm.full <- readRDS('data/sequence-data/LibCombined/phyloseq-objects/ps.norm.full')
-#ps.norm.full
+ps.norm.full
 
-
+# Remove duplicate samples:
 ps.raw.full <- prune_samples(sample_data(ps.raw.full)$Full.id != '19UW-WB-06-08-A-SI-duplicate' &
                                sample_data(ps.raw.full)$Full.id != '19UW-WB-07-02-O-SI-duplicate' &
                                sample_data(ps.raw.full)$Full.id != '19UW-WB-11-03-O-SI-duplicate'&
@@ -33,9 +36,16 @@ ps.norm.full <- prune_samples(sample_data(ps.norm.full)$Full.id != '19UW-WB-06-0
                                 sample_data(ps.norm.full)$Full.id != '19UW-WB-19-07-A-SI-duplicate' &
                                 sample_data(ps.norm.full)$Full.id != '19UW-WB-08-10-O-SI', ps.norm.full)
 
+# Remove taxa with 0 abundance:
+ps.raw.prune <-  prune_samples(sample_data(ps.raw.full)$incub.trtmt %in% c('pb','SI') &
+                                 sample_data(ps.raw.full)$DNA.type == 'gDNA', ps.raw.full) 
+ps.raw.prune <- prune_taxa(taxa_sums(ps.raw.prune)>0, ps.raw.prune) 
 
-ps.raw.full <- prune_taxa(taxa_sums(ps.raw.full)>0, ps.raw.full)
-ps.norm.full <- prune_taxa(taxa_sums(ps.norm.full)>0, ps.norm.full)
+
+ps.norm.prune <-  prune_samples(sample_data(ps.norm.full)$incub.trtmt %in% c('pb','SI') &
+                                  sample_data(ps.norm.full)$DNA.type == 'gDNA', ps.norm.full) 
+ps.norm.prune <- prune_taxa(taxa_sums(ps.norm.prune)>0, ps.norm.prune)
+
 
 # Create phylum dataset:
 #ps.raw.phylum <- tax_glom(ps.raw.full, taxrank = 'Phylum')
@@ -44,10 +54,8 @@ ps.norm.full <- prune_taxa(taxa_sums(ps.norm.full)>0, ps.norm.full)
 
 # EXPERIMENT 2 - pb Dry vs. 5-week dry -----
 
-ps.DvD <- ps.raw.full %>%
-  phyloseq::subset_samples(incub.trtmt %in% c('pb', 'SI')) %>%
-  subset_samples(DNA.type %in% c('gDNA')) %>%
-  subset_samples(burn.trtmt %in% c('dry')) 
+ps.DvD <- ps.raw.prune %>%
+  phyloseq::subset_samples(burn.trtmt %in% c('dry')) 
 
 # Set burn temp cutoff:
 df.dry <- data.frame(sample_data(ps.DvD))
@@ -102,12 +110,16 @@ for (j in 1:length(dt.DvD.O.gt50$significant_taxa)){
 
 df.DvD.O.gt50$Comparison = 'pb.dry.v.SI.dry'
 df.DvD.O.gt50$Experiment = 'fast growth'
-df.DvD.O.gt50$Temp.Cutoff = 'Low thermo greater than 50 C'
+df.DvD.O.gt50$Temp.Cutoff = 'Low thermo > 50 C'
 df.DvD.O.gt50$pH.cutoff = 'null'
 df.DvD.O.gt50$horizon = 'O'
+df.DvD.O.gt50$DNA.type = 'gDNA'
+df.DvD.O.gt50$Controlling.for = 'pH'
 
 colnames(df.DvD.O.gt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                            'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
+                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                              'DNA.type', 'Controlling.for')
+
 
 
 
@@ -156,13 +168,15 @@ for (j in 1:length(dt.DvD.A.gt50$significant_taxa)){
 
 df.DvD.A.gt50$Comparison = 'pb.dry.v.SI.dry'
 df.DvD.A.gt50$Experiment = 'fast growth'
-df.DvD.A.gt50$Temp.Cutoff = 'Low thermo greater than 50 C'
+df.DvD.A.gt50$Temp.Cutoff = 'Low thermo >50 C'
 df.DvD.A.gt50$pH.cutoff = 'null'
 df.DvD.A.gt50$horizon = 'A'
+df.DvD.A.gt50$DNA.type = 'gDNA'
+df.DvD.A.gt50$Controlling.for = 'pH'
 
 colnames(df.DvD.A.gt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                            'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
-
+                            'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                            'DNA.type', 'Controlling.for')
 
 
 
@@ -216,11 +230,12 @@ df.DvD.O.lt50$Experiment = 'fast growth'
 df.DvD.O.lt50$Temp.Cutoff = 'Low thermo less than 50 C'
 df.DvD.O.lt50$pH.cutoff = 'null'
 df.DvD.O.lt50$horizon = 'O'
+df.DvD.O.lt50$DNA.type = 'gDNA'
+df.DvD.O.lt50$Controlling.for = 'pH'
 
 colnames(df.DvD.O.lt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                            'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
-
-
+                            'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                            'DNA.type', 'Controlling.for')
 
 
 
@@ -274,10 +289,12 @@ df.DvD.A.lt50$Experiment = 'fast growth'
 df.DvD.A.lt50$Temp.Cutoff = 'Low thermo less than 50 C'
 df.DvD.A.lt50$pH.cutoff = 'null'
 df.DvD.A.lt50$horizon = 'A'
+df.DvD.A.lt50$DNA.type = 'gDNA'
+df.DvD.A.lt50$Controlling.for = 'pH'
 
 colnames(df.DvD.A.lt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                            'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
-
+                            'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                            'DNA.type', 'Controlling.for')
 
 
 
@@ -288,10 +305,8 @@ colnames(df.DvD.A.lt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison',
 
 # EXPERIMENT 2 - pb wet vs. 5-week wet -----
 
-ps.WvW <- ps.raw.full %>%
-  phyloseq::subset_samples(incub.trtmt %in% c('pb', 'SI')) %>%
-  subset_samples(DNA.type %in% c('gDNA')) %>%
-  subset_samples(burn.trtmt %in% c('wet')) 
+ps.WvW <- ps.raw.prune %>%
+  phyloseq::subset_samples(burn.trtmt %in% c('wet')) 
 
 # Set burn temp cutoff:
 df.wet <- data.frame(sample_data(ps.WvW))
@@ -346,13 +361,15 @@ for (j in 1:length(dt.WvW.O.gt50$significant_taxa)){
 
 df.WvW.O.gt50$Comparison = 'pb.wet.v.SI.wet'
 df.WvW.O.gt50$Experiment = 'fast growth'
-df.WvW.O.gt50$Temp.Cutoff = 'Low thermo greater than 50 C'
+df.WvW.O.gt50$Temp.Cutoff = 'Low thermo >50 C'
 df.WvW.O.gt50$pH.cutoff = 'null'
 df.WvW.O.gt50$horizon = 'O'
+df.WvW.O.gt50$DNA.type = 'gDNA'
+df.WvW.O.gt50$Controlling.for = 'pH'
 
 colnames(df.WvW.O.gt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                            'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
-
+                            'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                            'DNA.type', 'Controlling.for')
 
 
 
@@ -399,13 +416,15 @@ for (j in 1:length(dt.WvW.A.gt50$significant_taxa)){
 
 df.WvW.A.gt50$Comparison = 'pb.wet.v.SI.wet'
 df.WvW.A.gt50$Experiment = 'fast growth'
-df.WvW.A.gt50$Temp.Cutoff = 'Low thermo greater than 50 C'
+df.WvW.A.gt50$Temp.Cutoff = 'Low thermo >50 C'
 df.WvW.A.gt50$pH.cutoff = 'null'
 df.WvW.A.gt50$horizon = 'A'
+df.WvW.A.gt50$DNA.type = 'gDNA'
+df.WvW.A.gt50$Controlling.for = 'pH'
 
 colnames(df.WvW.A.gt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                            'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
-
+                            'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                            'DNA.type', 'Controlling.for')
 
 
 
@@ -460,10 +479,12 @@ df.WvW.O.lt50$Experiment = 'fast growth'
 df.WvW.O.lt50$Temp.Cutoff = 'Low thermo less than 50 C'
 df.WvW.O.lt50$pH.cutoff = 'null'
 df.WvW.O.lt50$horizon = 'O'
+df.WvW.O.lt50$DNA.type = 'gDNA'
+df.WvW.O.lt50$Controlling.for = 'pH'
 
 colnames(df.WvW.O.lt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                            'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
-
+                            'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                            'DNA.type', 'Controlling.for')
 
 
 
@@ -519,10 +540,12 @@ df.WvW.A.lt50$Experiment = 'fast growth'
 df.WvW.A.lt50$Temp.Cutoff = 'Low thermo less than 50 C'
 df.WvW.A.lt50$pH.cutoff = 'null'
 df.WvW.A.lt50$horizon = 'A'
+df.WvW.A.lt50$DNA.type = 'gDNA'
+df.WvW.A.lt50$Controlling.for = 'pH'
 
 colnames(df.WvW.A.lt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                            'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
-
+                            'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                            'DNA.type', 'Controlling.for')
 
 
 
@@ -532,10 +555,8 @@ colnames(df.WvW.A.lt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison',
 
 # EXPERIMENT 2 - pb control vs. 5-week control -----
 
-ps.CvC <- ps.raw.full %>%
-  phyloseq::subset_samples(incub.trtmt %in% c('pb', 'SI')) %>%
-  subset_samples(DNA.type %in% c('gDNA')) %>%
-  subset_samples(burn.trtmt %in% c('control')) 
+ps.CvC <- ps.raw.prune %>%
+  phyloseq::subset_samples(burn.trtmt %in% c('control')) 
 
 # Set burn temp cutoff:
 df.control <- data.frame(sample_data(ps.CvC))
@@ -590,12 +611,15 @@ for (j in 1:length(dt.CvC.O.gt50$significant_taxa)){
 
 df.CvC.O.gt50$Comparison = 'pb.control.v.SI.control'
 df.CvC.O.gt50$Experiment = 'fast growth'
-df.CvC.O.gt50$Temp.Cutoff = 'Low thermo greater than 50 C'
+df.CvC.O.gt50$Temp.Cutoff = 'Low thermo >50 C'
 df.CvC.O.gt50$pH.cutoff = 'null'
 df.CvC.O.gt50$horizon = 'O'
+df.CvC.O.gt50$DNA.type = 'gDNA'
+df.CvC.O.gt50$Controlling.for = 'pH'
 
 colnames(df.CvC.O.gt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                            'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
+                            'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                            'DNA.type', 'Controlling.for')
 
 
 
@@ -644,13 +668,15 @@ for (j in 1:length(dt.CvC.A.gt50$significant_taxa)){
 
 df.CvC.A.gt50$Comparison = 'pb.control.v.SI.control'
 df.CvC.A.gt50$Experiment = 'fast growth'
-df.CvC.A.gt50$Temp.Cutoff = 'Low thermo greater than 50 C'
+df.CvC.A.gt50$Temp.Cutoff = 'Low thermo >50 C'
 df.CvC.A.gt50$pH.cutoff = 'null'
 df.CvC.A.gt50$horizon = 'A'
+df.CvC.A.gt50$DNA.type = 'gDNA'
+df.CvC.A.gt50$Controlling.for = 'pH'
 
 colnames(df.CvC.A.gt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                            'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
-
+                            'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                            'DNA.type', 'Controlling.for')
 
 
 
@@ -705,10 +731,12 @@ df.CvC.O.lt50$Experiment = 'fast growth'
 df.CvC.O.lt50$Temp.Cutoff = 'Low thermo less than 50 C'
 df.CvC.O.lt50$pH.cutoff = 'null'
 df.CvC.O.lt50$horizon = 'O'
+df.CvC.O.lt50$DNA.type = 'gDNA'
+df.CvC.O.lt50$Controlling.for = 'pH'
 
 colnames(df.CvC.O.lt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                            'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
-
+                            'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                            'DNA.type', 'Controlling.for')
 
 
 
@@ -764,10 +792,12 @@ df.CvC.A.lt50$Experiment = 'fast growth'
 df.CvC.A.lt50$Temp.Cutoff = 'Low thermo less than 50 C'
 df.CvC.A.lt50$pH.cutoff = 'null'
 df.CvC.A.lt50$horizon = 'A'
+df.CvC.A.lt50$DNA.type = 'gDNA'
+df.CvC.A.lt50$Controlling.for = 'pH'
 
 colnames(df.CvC.A.lt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                            'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
-
+                            'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                            'DNA.type', 'Controlling.for')
 
 
 

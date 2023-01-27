@@ -11,44 +11,38 @@ library(phyloseq)
 library(magrittr)
 library(dplyr)
 
-# Corncob analysis for Manuscript: 
-# Input data -----
-#      Input to corncob is raw count data!
+#setwd("C:/Users/danab/Box/WhitmanLab/Projects/WoodBuffalo/FireSim2019/")
 
+### CORNCOB TAKES RAW SEQ DATA AS INPUT ###
+
+### Step 1. Import relevant phyloseq data ----
+# Raw seqs
 ps.raw.full <- readRDS('data/sequence-data/LibCombined/phyloseq-objects/ps.raw.full')
 ps.raw.full
 
 ps.norm.full <- readRDS('data/sequence-data/LibCombined/phyloseq-objects/ps.norm.full')
 ps.norm.full
 
-
-ps.raw.full <- prune_samples(sample_data(ps.raw.full)$Full.id != '19UW-WB-06-08-A-SI-duplicate' &
-                               sample_data(ps.raw.full)$Full.id != '19UW-WB-07-02-O-SI-duplicate' &
-                               sample_data(ps.raw.full)$Full.id != '19UW-WB-11-03-O-SI-duplicate'&
-                               sample_data(ps.raw.full)$Full.id != '19UW-WB-19-07-A-SI-duplicate' &
-                               sample_data(ps.raw.full)$Full.id != '19UW-WB-08-10-O-SI', ps.raw.full)
+# Exclude all but 6 month incubation samples and emove taxa with 0 abundance:
+ps.raw.prune <-  prune_samples(sample_data(ps.raw.full)$incub.trtmt %in% c('LIwA') &
+                                 sample_data(ps.raw.full)$DNA.type == 'gDNA', ps.raw.full) 
+ps.raw.prune <- prune_taxa(taxa_sums(ps.raw.prune)>0, ps.raw.prune) 
 
 
-ps.norm.full <- prune_samples(sample_data(ps.norm.full)$Full.id != '19UW-WB-06-08-A-SI-duplicate' &
-                                sample_data(ps.norm.full)$Full.id != '19UW-WB-07-02-O-SI-duplicate' &
-                                sample_data(ps.norm.full)$Full.id != '19UW-WB-11-03-O-SI-duplicate'&
-                                sample_data(ps.norm.full)$Full.id != '19UW-WB-19-07-A-SI-duplicate' &
-                                sample_data(ps.norm.full)$Full.id != '19UW-WB-08-10-O-SI', ps.norm.full)
+ps.norm.prune <-  prune_samples(sample_data(ps.norm.full)$incub.trtmt %in% c('LIwA') &
+                                  sample_data(ps.norm.full)$DNA.type == 'gDNA', ps.norm.full) 
+ps.norm.prune <- prune_taxa(taxa_sums(ps.norm.prune)>0, ps.norm.prune)
 
 
-ps.raw.full <- prune_taxa(taxa_sums(ps.raw.full)>0, ps.raw.full)
-ps.norm.full <- prune_taxa(taxa_sums(ps.norm.full)>0, ps.norm.full)
-
+# Create phylum dataset:
+#ps.raw.phylum <- tax_glom(ps.raw.prune, taxrank = 'Phylum')
+#ps.raw.prune <- ps.raw.phylum
 
 ### EXPERIMENT 1 -----
 
-ps.raw.LIwA <- ps.raw.full %>%
-  phyloseq::subset_samples(incub.trtmt %in% c('LIwA'))
-
-
 # DRY BURNS -----
 #     Create Temp cutoff 
-ps.LIwA.dry <-  prune_samples(sample_data(ps.raw.LIwA)$burn.trtmt != 'wet', ps.raw.LIwA)
+ps.LIwA.dry <-  prune_samples(sample_data(ps.raw.prune)$burn.trtmt != 'wet', ps.raw.prune)
 
 #    Create dataframe from ps.LIwA.dry sample_data.
 df.dry <- data.frame(sample_data(ps.LIwA.dry))
@@ -109,13 +103,15 @@ for (j in 1:length(dt.LIwA.DryBurn.O.gt50$significant_taxa)){
 
 df.Dry.O.gt50$Comparison = 'LIwA.dry.v.LIwA.control'
 df.Dry.O.gt50$Experiment = 'survival'
-df.Dry.O.gt50$Temp.Cutoff = 'Mid thermo less than 50 C' 
+df.Dry.O.gt50$Temp.Cutoff = 'Mid thermo < 50 C' 
 df.Dry.O.gt50$pH.cutoff = 'null'
 df.Dry.O.gt50$horizon = 'O'
+df.Dry.O.gt50$DNA.type = 'gDNA'
+df.Dry.O.gt50$Controlling.for = 'pre-burn pH'
 
 colnames(df.Dry.O.gt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                             'Experiment', 'Temp.cutoff','pH.cutoff','horizon')
-
+                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                              'DNA.type', 'Controlling.for')
 
 
 
@@ -161,12 +157,15 @@ for (j in 1:length(dt.LIwA.DryBurn.A.gt50$significant_taxa)){
 
 df.Dry.A.gt50$Comparison = 'LIwA.dry.v.LIwA.control'
 df.Dry.A.gt50$Experiment = 'survival'
-df.Dry.A.gt50$Temp.Cutoff = 'Mid thermo less than 50 C' 
+df.Dry.A.gt50$Temp.Cutoff = 'Mid thermo < 50 C' 
 df.Dry.A.gt50$pH.cutoff = 'null'
 df.Dry.A.gt50$horizon = 'A'
+df.Dry.A.gt50$DNA.type = 'gDNA'
+df.Dry.A.gt50$Controlling.for = 'pre-burn pH'
 
 colnames(df.Dry.A.gt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                             'Experiment', 'Temp.cutoff','pH.cutoff','horizon')
+                            'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                            'DNA.type', 'Controlling.for')
 
 
 
@@ -216,13 +215,15 @@ for (j in 1:length(dt.LIwA.DryBurn.O.lt50$significant_taxa)){
 
 df.Dry.O.lt50$Comparison = 'LIwA.dry.v.LIwA.control'
 df.Dry.O.lt50$Experiment = 'survival'
-df.Dry.O.lt50$Temp.Cutoff = 'Mid thermo less than 50 C' 
+df.Dry.O.lt50$Temp.Cutoff = 'Mid thermo < 50 C' 
 df.Dry.O.lt50$pH.cutoff = 'null'
 df.Dry.O.lt50$horizon = 'O'
+df.Dry.O.lt50$DNA.type = 'gDNA'
+df.Dry.O.lt50$Controlling.for = 'pre-burn pH'
 
 colnames(df.Dry.O.lt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                             'Experiment', 'Temp.cutoff','pH.cutoff','horizon')
-
+                            'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                            'DNA.type', 'Controlling.for')
 
 
 
@@ -274,13 +275,15 @@ for (j in 1:length(dt.LIwA.DryBurn.A.lt50$significant_taxa)){
 
 df.Dry.A.lt50$Comparison = 'LIwA.dry.v.LIwA.control'
 df.Dry.A.lt50$Experiment = 'survival'
-df.Dry.A.lt50$Temp.Cutoff = 'Mid thermo less than 50 C' 
+df.Dry.A.lt50$Temp.Cutoff = 'Mid thermo < 50 C' 
 df.Dry.A.lt50$pH.cutoff = 'null'
 df.Dry.A.lt50$horizon = 'A'
+df.Dry.A.lt50$DNA.type = 'gDNA'
+df.Dry.A.lt50$Controlling.for = 'pre-burn pH'
 
 colnames(df.Dry.A.lt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                             'Experiment', 'Temp.cutoff','pH.cutoff','horizon')
-
+                            'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                            'DNA.type', 'Controlling.for')
 
 
 
@@ -364,13 +367,15 @@ for (j in 1:length(dt.LIwA.wetBurn.O.gt50$significant_taxa)){
 
 df.wet.O.gt50$Comparison = 'LIwA.wet.v.LIwA.control'
 df.wet.O.gt50$Experiment = 'survival'
-df.wet.O.gt50$Temp.Cutoff = 'Mid thermo less than 50 C' 
+df.wet.O.gt50$Temp.Cutoff = 'Mid thermo < 50 C' 
 df.wet.O.gt50$pH.cutoff = 'null'
 df.wet.O.gt50$horizon = 'O'
+df.wet.O.gt50$DNA.type = 'gDNA'
+df.wet.O.gt50$Controlling.for = 'pre-burn pH'
 
 colnames(df.wet.O.gt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                             'Experiment', 'Temp.cutoff','pH.cutoff','horizon')
-
+                            'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                            'DNA.type', 'Controlling.for')
 
 
 
@@ -417,13 +422,15 @@ for (j in 1:length(dt.LIwA.wetBurn.A.gt50$significant_taxa)){
 
 df.wet.A.gt50$Comparison = 'LIwA.wet.v.LIwA.control'
 df.wet.A.gt50$Experiment = 'survival'
-df.wet.A.gt50$Temp.Cutoff = 'Mid thermo less than 50 C' 
+df.wet.A.gt50$Temp.Cutoff = 'Mid thermo < 50 C' 
 df.wet.A.gt50$pH.cutoff = 'null'
 df.wet.A.gt50$horizon = 'A'
+df.wet.A.gt50$DNA.type = 'gDNA'
+df.wet.A.gt50$Controlling.for = 'pre-burn pH'
 
 colnames(df.wet.A.gt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                             'Experiment', 'Temp.cutoff','pH.cutoff','horizon')
-
+                            'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                            'DNA.type', 'Controlling.for')
 
 
 # 3.  Wet Vs. Control; O horizon; Mid thermo < 50 C -----
@@ -471,13 +478,15 @@ for (j in 1:length(dt.LIwA.wetBurn.O.lt50$significant_taxa)){
 
 df.wet.O.lt50$Comparison = 'LIwA.wet.v.LIwA.control'
 df.wet.O.lt50$Experiment = 'survival'
-df.wet.O.lt50$Temp.Cutoff = 'Mid thermo less than 50 C' 
+df.wet.O.lt50$Temp.Cutoff = 'Mid thermo < 50 C' 
 df.wet.O.lt50$pH.cutoff = 'null'
 df.wet.O.lt50$horizon = 'O'
+df.wet.O.lt50$DNA.type = 'gDNA'
+df.wet.O.lt50$Controlling.for = 'pre-burn pH'
 
 colnames(df.wet.O.lt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                             'Experiment', 'Temp.cutoff','pH.cutoff','horizon')
-
+                            'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                            'DNA.type', 'Controlling.for')
 
 
 
@@ -528,14 +537,15 @@ for (j in 1:length(dt.LIwA.wetBurn.A.lt50$significant_taxa)){
 
 df.wet.A.lt50$Comparison = 'LIwA.wet.v.LIwA.control'
 df.wet.A.lt50$Experiment = 'survival'
-df.wet.A.lt50$Temp.Cutoff = 'Mid thermo less than 50 C' 
+df.wet.A.lt50$Temp.Cutoff = 'Mid thermo < 50 C' 
 df.wet.A.lt50$pH.cutoff = 'null'
 df.wet.A.lt50$horizon = 'A'
+df.wet.A.lt50$DNA.type = 'gDNA'
+df.wet.A.lt50$Controlling.for = 'pre-burn pH'
 
 colnames(df.wet.A.lt50) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                             'Experiment', 'Temp.cutoff','pH.cutoff','horizon')
-
-
+                            'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                            'DNA.type', 'Controlling.for')
 
 
 
@@ -547,7 +557,7 @@ df.joined.wet <- rbind(df.wet.O.gt50,
 
 # Let's bring back in our taxonomy from the tax table
 SigOTUs = levels(as.factor(df.joined.wet$OTU))
-pruned = prune_taxa(SigOTUs,ps.norm.full)
+pruned = prune_taxa(SigOTUs,ps.norm.prune)
 taxtab = data.frame(tax_table(pruned))
 taxtab$OTU = c(taxa_names(pruned))
 df.joined.wet = merge(df.joined.wet,taxtab,by=c("OTU"))

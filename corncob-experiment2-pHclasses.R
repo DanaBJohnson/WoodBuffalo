@@ -11,16 +11,19 @@ library(magrittr)
 library(dplyr)
 
 
-# Input data -----
-#      Input to corncob is raw count data!
+#setwd("C:/Users/danab/Box/WhitmanLab/Projects/WoodBuffalo/FireSim2019/")
 
+### CORNCOB TAKES RAW SEQ DATA AS INPUT ###
+
+### Step 1. Import relevant phyloseq data ----
+# Raw seqs
 ps.raw.full <- readRDS('data/sequence-data/LibCombined/phyloseq-objects/ps.raw.full')
 ps.raw.full
 
 ps.norm.full <- readRDS('data/sequence-data/LibCombined/phyloseq-objects/ps.norm.full')
-#ps.norm.full
+ps.norm.full
 
-
+# Remove duplicate samples:
 ps.raw.full <- prune_samples(sample_data(ps.raw.full)$Full.id != '19UW-WB-06-08-A-SI-duplicate' &
                                sample_data(ps.raw.full)$Full.id != '19UW-WB-07-02-O-SI-duplicate' &
                                sample_data(ps.raw.full)$Full.id != '19UW-WB-11-03-O-SI-duplicate'&
@@ -34,18 +37,27 @@ ps.norm.full <- prune_samples(sample_data(ps.norm.full)$Full.id != '19UW-WB-06-0
                              sample_data(ps.norm.full)$Full.id != '19UW-WB-19-07-A-SI-duplicate' &
                             sample_data(ps.norm.full)$Full.id != '19UW-WB-08-10-O-SI', ps.norm.full)
 
+# Remove taxa with 0 abundance:
+ps.raw.prune <-  prune_samples(sample_data(ps.raw.full)$incub.trtmt %in% c('pb','SI') &
+                                sample_data(ps.raw.full)$DNA.type == 'gDNA', ps.raw.full) 
+ps.raw.prune <- prune_taxa(taxa_sums(ps.raw.prune)>0, ps.raw.prune) 
 
-ps.raw.full <- prune_taxa(taxa_sums(ps.raw.full)>0, ps.raw.full)
-ps.norm.full <- prune_taxa(taxa_sums(ps.norm.full)>0, ps.norm.full)
 
+ps.norm.prune <-  prune_samples(sample_data(ps.norm.full)$incub.trtmt %in% c('pb','SI') &
+                                 sample_data(ps.norm.full)$DNA.type == 'gDNA', ps.norm.full) 
+ps.norm.prune <- prune_taxa(taxa_sums(ps.norm.prune)>0, ps.norm.prune)
+
+
+
+### Step 2. Subset dataset for initial analyses -----
 # Create phylum dataset:
-#ps.raw.phylum <- tax_glom(ps.raw.full, taxrank = 'Phylum')
-#ps.raw.phylum
+#ps.raw.phylum <- tax_glom(ps.raw.prune, taxrank = 'Phylum')
+#ps.raw.prune <- ps.raw.phylum
 
 
+### Step 4. Create sliding pH categories -----
 
-#     Create sliding pH categories:
-df <- data.frame(sample_data(ps.raw.full))
+df <- data.frame(sample_data(ps.raw.prune))
 
 df$pH.3to7 = ''
 df$pH.4to8 = ''
@@ -79,20 +91,17 @@ for (i in 1:nrow(df)) {
   } 
 }
 
-
-#    Create temperature categories:
+# Merge new categories with phyloseq object
 ps.df <- sample_data(df)
 
 sample_names(ps.df) = df$Full.id
 
-sample_data(ps.raw.full) <- ps.df
+sample_data(ps.raw.prune) <- ps.df
 
 
+### Step 4 XXX, dry burns ----
 
-# EXPERIMENT 2 - pH categories, dry -----
-ps.DvD <- prune_samples(sample_data(ps.raw.full)$incub.trtmt %in% c('pb','SI') &
-                          sample_data(ps.raw.full)$burn.trtmt == 'dry' &
-                          sample_data(ps.raw.full)$DNA.type == 'gDNA', ps.raw.full)
+ps.DvD <- prune_samples(sample_data(ps.raw.prune)$burn.trtmt == 'dry', ps.raw.prune)
 
 ### pH 3 to 7, Dry burns, O horizon -----
 ps.corncob.DvD.O.pH3to7 <-  prune_samples(sample_data(ps.DvD)$horizon == 'O' & 
@@ -141,9 +150,13 @@ df.DvD.O.pH3to7$Experiment = 'fast growth'
 df.DvD.O.pH3to7$Temp.Cutoff = 'null'
 df.DvD.O.pH3to7$pH.cutoff = '3 to 7'
 df.DvD.O.pH3to7$horizon = 'O'
+df.DvD.O.pH3to7$DNA.type = 'gDNA'
+df.DvD.O.pH3to7$Controlling.for = 'pH'
 
 colnames(df.DvD.O.pH3to7) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
+                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                              'DNA.type', 'Controlling.for')
+
 
 
 ### pH 4 to 8, Dry burns, O horizon -----
@@ -194,10 +207,12 @@ df.DvD.O.pH4to8$Experiment = 'fast growth'
 df.DvD.O.pH4to8$Temp.Cutoff = 'null'
 df.DvD.O.pH4to8$pH.cutoff = '4 to 8'
 df.DvD.O.pH4to8$horizon = 'O'
+df.DvD.O.pH4to8$DNA.type = 'gDNA'
+df.DvD.O.pH4to8$Controlling.for = 'pH'
 
 colnames(df.DvD.O.pH4to8) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
-
+                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                              'DNA.type', 'Controlling.for')
 
 ### pH 5 to 9, Dry burns, O horizon -----
 ps.corncob.DvD.O.pH5to9 <-  prune_samples(sample_data(ps.DvD)$horizon == 'O' & 
@@ -245,10 +260,12 @@ df.DvD.O.pH5to9$Experiment = 'fast growth'
 df.DvD.O.pH5to9$Temp.Cutoff = 'null'
 df.DvD.O.pH5to9$pH.cutoff = '5 to 9'
 df.DvD.O.pH5to9$horizon = 'O'
+df.DvD.O.pH5to9$DNA.type = 'gDNA'
+df.DvD.O.pH5to9$Controlling.for = 'pH'
 
 colnames(df.DvD.O.pH5to9) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
-
+                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                              'DNA.type', 'Controlling.for')
 
 ### pH 3 to 7, Dry burns, A horizon -----
 ps.corncob.DvD.A.pH3to7 <-  prune_samples(sample_data(ps.DvD)$horizon == 'A' & 
@@ -297,10 +314,12 @@ df.DvD.A.pH3to7$Experiment = 'fast growth'
 df.DvD.A.pH3to7$Temp.Cutoff = 'null'
 df.DvD.A.pH3to7$pH.cutoff = '3 to 7'
 df.DvD.A.pH3to7$horizon = 'A'
+df.DvD.A.pH3to7$DNA.type = 'gDNA'
+df.DvD.A.pH3to7$Controlling.for = 'pH'
 
 colnames(df.DvD.A.pH3to7) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
-
+                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                              'DNA.type', 'Controlling.for')
 
 ### pH 4 to 8, Dry burns, A horizon -----
 
@@ -348,10 +367,12 @@ df.DvD.A.pH4to8$Experiment = 'fast growth'
 df.DvD.A.pH4to8$Temp.Cutoff = 'null'
 df.DvD.A.pH4to8$pH.cutoff = '4 to 8'
 df.DvD.A.pH4to8$horizon = 'A'
+df.DvD.A.pH4to8$DNA.type = 'gDNA'
+df.DvD.A.pH4to8$Controlling.for = 'pH'
 
 colnames(df.DvD.A.pH4to8) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
-
+                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                              'DNA.type', 'Controlling.for')
 
 ### pH 5 to 9, Dry burns, A horizon -----
 ps.corncob.DvD.A.pH5to9 <-  prune_samples(sample_data(ps.DvD)$horizon == 'A' & 
@@ -399,10 +420,12 @@ df.DvD.A.pH5to9$Experiment = 'fast growth'
 df.DvD.A.pH5to9$Temp.Cutoff = 'null'
 df.DvD.A.pH5to9$pH.cutoff = '5 to 9'
 df.DvD.A.pH5to9$horizon = 'A'
+df.DvD.A.pH5to9$DNA.type = 'gDNA'
+df.DvD.A.pH5to9$Controlling.for = 'pH'
 
 colnames(df.DvD.A.pH5to9) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
-
+                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                              'DNA.type', 'Controlling.for')
 
 
 ### Combine pH category output -----
@@ -433,9 +456,8 @@ head(df.joined.DvD.pH)
 
 # EXPERIMENT 2 - pH categories, wet -----
 
-ps.WvW <- prune_samples(sample_data(ps.raw.full)$incub.trtmt %in% c('pb','SI') &
-                          sample_data(ps.raw.full)$burn.trtmt == 'wet' &
-                          sample_data(ps.raw.full)$DNA.type == 'gDNA', ps.raw.full)
+ps.WvW <- prune_samples(sample_data(ps.raw.prune)$burn.trtmt == 'wet', ps.raw.prune)
+
 ### pH 3 to 7, wet burns, O horizon -----
 ps.corncob.WvW.O.pH3to7 <-  prune_samples(sample_data(ps.WvW)$horizon == 'O' & 
                                             sample_data(ps.WvW)$pH.3to7 == 'y', ps.WvW)
@@ -479,9 +501,12 @@ df.WvW.O.pH3to7$Experiment = 'fast growth'
 df.WvW.O.pH3to7$Temp.Cutoff = 'null'
 df.WvW.O.pH3to7$pH.cutoff = '3 to 7'
 df.WvW.O.pH3to7$horizon = 'O'
+df.WvW.O.pH3to7$DNA.type = 'gDNA'
+df.WvW.O.pH3to7$Controlling.for = 'pH'
 
 colnames(df.WvW.O.pH3to7) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
+                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                              'DNA.type', 'Controlling.for')
 
 
 ### pH 4 to 8, wet burns, O horizon -----
@@ -527,9 +552,14 @@ df.WvW.O.pH4to8$Experiment = 'fast growth'
 df.WvW.O.pH4to8$Temp.Cutoff = 'null'
 df.WvW.O.pH4to8$pH.cutoff = '4 to 8'
 df.WvW.O.pH4to8$horizon = 'O'
+df.WvW.O.pH4to8$DNA.type = 'gDNA'
+df.WvW.O.pH4to8$Controlling.for = 'pH'
 
 colnames(df.WvW.O.pH4to8) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
+                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                              'DNA.type', 'Controlling.for')
+
+
 
 
 ### pH 5 to 9, wet burns, O horizon -----
@@ -575,9 +605,12 @@ df.WvW.O.pH5to9$Experiment = 'fast growth'
 df.WvW.O.pH5to9$Temp.Cutoff = 'null'
 df.WvW.O.pH5to9$pH.cutoff = '5 to 9'
 df.WvW.O.pH5to9$horizon = 'O'
+df.WvW.O.pH5to9$DNA.type = 'gDNA'
+df.WvW.O.pH5to9$Controlling.for = 'pH'
 
 colnames(df.WvW.O.pH5to9) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
+                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                              'DNA.type', 'Controlling.for')
 
 
 ### pH 3 to 7, wet burns, A horizon -----
@@ -623,10 +656,12 @@ df.WvW.A.pH3to7$Experiment = 'fast growth'
 df.WvW.A.pH3to7$Temp.Cutoff = 'null'
 df.WvW.A.pH3to7$pH.cutoff = '3 to 7'
 df.WvW.A.pH3to7$horizon = 'A'
+df.WvW.A.pH3to7$DNA.type = 'gDNA'
+df.WvW.A.pH3to7$Controlling.for = 'pH'
 
 colnames(df.WvW.A.pH3to7) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
-
+                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                              'DNA.type', 'Controlling.for')
 
 ### pH 4 to 8, wet burns, A horizon -----
 
@@ -671,10 +706,12 @@ df.WvW.A.pH4to8$Experiment = 'fast growth'
 df.WvW.A.pH4to8$Temp.Cutoff = 'null'
 df.WvW.A.pH4to8$pH.cutoff = '4 to 8'
 df.WvW.A.pH4to8$horizon = 'A'
+df.WvW.A.pH4to8$DNA.type = 'gDNA'
+df.WvW.A.pH4to8$Controlling.for = 'pH'
 
 colnames(df.WvW.A.pH4to8) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
-
+                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                              'DNA.type', 'Controlling.for')
 
 ### pH 5 to 9, wet burns, A horizon -----
 ps.corncob.WvW.A.pH5to9 <-  prune_samples(sample_data(ps.WvW)$horizon == 'A' & 
@@ -719,11 +756,12 @@ df.WvW.A.pH5to9$Experiment = 'fast growth'
 df.WvW.A.pH5to9$Temp.Cutoff = 'null'
 df.WvW.A.pH5to9$pH.cutoff = '5 to 9'
 df.WvW.A.pH5to9$horizon = 'A'
+df.WvW.A.pH5to9$DNA.type = 'gDNA'
+df.WvW.A.pH5to9$Controlling.for = 'pH'
 
 colnames(df.WvW.A.pH5to9) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
-
-
+                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                              'DNA.type', 'Controlling.for')
 
 ### Combine pH category output -----
 ps.corncob.WvW.O.pH3to7
@@ -757,7 +795,7 @@ dim(df.WvW.A.pH5to9)
 
 # Let's bring back in our taxonomy from the tax table
 SigOTUs = levels(as.factor(df.WvW.pH.groups$OTU))
-pruned = prune_taxa(SigOTUs,ps.norm.full)
+pruned = prune_taxa(SigOTUs,ps.norm.prune)
 taxtab = data.frame(tax_table(pruned))
 taxtab$OTU = c(taxa_names(pruned))
 df.joined.WvW.pH = merge(df.WvW.pH.groups,taxtab,by=c("OTU"))
@@ -766,9 +804,8 @@ head(df.joined.WvW.pH)
 
 # EXPERIMENT 2 - pH categories, control -----
 
-ps.CvC <- prune_samples(sample_data(ps.raw.full)$incub.trtmt %in% c('pb','SI') &
-                          sample_data(ps.raw.full)$burn.trtmt == 'control' &
-                          sample_data(ps.raw.full)$DNA.type == 'gDNA', ps.raw.full)
+ps.CvC <- prune_samples(sample_data(ps.raw.prune)$burn.trtmt == 'control', ps.raw.prune)
+
 ### pH 3 to 7, control burns, O horizon -----
 ps.corncob.CvC.O.pH3to7 <-  prune_samples(sample_data(ps.CvC)$horizon == 'O' & 
                                             sample_data(ps.CvC)$pH.3to7 == 'y', ps.CvC)
@@ -812,10 +849,12 @@ df.CvC.O.pH3to7$Experiment = 'fast growth'
 df.CvC.O.pH3to7$Temp.Cutoff = 'null'
 df.CvC.O.pH3to7$pH.cutoff = '3 to 7'
 df.CvC.O.pH3to7$horizon = 'O'
+df.CvC.O.pH3to7$DNA.type = 'gDNA'
+df.CvC.O.pH3to7$Controlling.for = 'pH'
 
 colnames(df.CvC.O.pH3to7) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
-
+                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                              'DNA.type', 'Controlling.for')
 
 ### pH 4 to 8, control burns, O horizon -----
 
@@ -860,10 +899,12 @@ df.CvC.O.pH4to8$Experiment = 'fast growth'
 df.CvC.O.pH4to8$Temp.Cutoff = 'null'
 df.CvC.O.pH4to8$pH.cutoff = '4 to 8'
 df.CvC.O.pH4to8$horizon = 'O'
+df.CvC.O.pH4to8$DNA.type = 'gDNA'
+df.CvC.O.pH4to8$Controlling.for = 'pH'
 
 colnames(df.CvC.O.pH4to8) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
-
+                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                              'DNA.type', 'Controlling.for')
 
 ### pH 5 to 9, control burns, O horizon -----
 ps.corncob.CvC.O.pH5to9 <-  prune_samples(sample_data(ps.CvC)$horizon == 'O' & 
@@ -908,10 +949,12 @@ df.CvC.O.pH5to9$Experiment = 'fast growth'
 df.CvC.O.pH5to9$Temp.Cutoff = 'null'
 df.CvC.O.pH5to9$pH.cutoff = '5 to 9'
 df.CvC.O.pH5to9$horizon = 'O'
+df.CvC.O.pH5to9$DNA.type = 'gDNA'
+df.CvC.O.pH5to9$Controlling.for = 'pH'
 
 colnames(df.CvC.O.pH5to9) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
-
+                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                              'DNA.type', 'Controlling.for')
 
 ### pH 3 to 7, control burns, A horizon -----
 ps.corncob.CvC.A.pH3to7 <-  prune_samples(sample_data(ps.CvC)$horizon == 'A' & 
@@ -956,10 +999,12 @@ df.CvC.A.pH3to7$Experiment = 'fast growth'
 df.CvC.A.pH3to7$Temp.Cutoff = 'null'
 df.CvC.A.pH3to7$pH.cutoff = '3 to 7'
 df.CvC.A.pH3to7$horizon = 'A'
+df.CvC.A.pH3to7$DNA.type = 'gDNA'
+df.CvC.A.pH3to7$Controlling.for = 'pH'
 
 colnames(df.CvC.A.pH3to7) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
-
+                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                              'DNA.type', 'Controlling.for')
 
 ### pH 4 to 8, control burns, A horizon -----
 
@@ -1004,10 +1049,12 @@ df.CvC.A.pH4to8$Experiment = 'fast growth'
 df.CvC.A.pH4to8$Temp.Cutoff = 'null'
 df.CvC.A.pH4to8$pH.cutoff = '4 to 8'
 df.CvC.A.pH4to8$horizon = 'A'
+df.CvC.A.pH4to8$DNA.type = 'gDNA'
+df.CvC.A.pH4to8$Controlling.for = 'pH'
 
 colnames(df.CvC.A.pH4to8) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
-
+                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                              'DNA.type', 'Controlling.for')
 
 ### pH 5 to 9, control burns, A horizon -----
 ps.corncob.CvC.A.pH5to9 <-  prune_samples(sample_data(ps.CvC)$horizon == 'A' & 
@@ -1052,10 +1099,12 @@ df.CvC.A.pH5to9$Experiment = 'fast growth'
 df.CvC.A.pH5to9$Temp.Cutoff = 'null'
 df.CvC.A.pH5to9$pH.cutoff = '5 to 9'
 df.CvC.A.pH5to9$horizon = 'A'
+df.CvC.A.pH5to9$DNA.type = 'gDNA'
+df.CvC.A.pH5to9$Controlling.for = 'pH'
 
 colnames(df.CvC.A.pH5to9) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff', 'pH.cutoff','horizon')
-
+                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
+                              'DNA.type', 'Controlling.for')
 
 
 ### Combine pH category output -----
@@ -1084,7 +1133,7 @@ df.CvC.pH.groups <- rbind(df.CvC.O.pH3to7,
 
 # Let's bring back in our taxonomy from the tax table
 SigOTUs = levels(as.factor(df.CvC.pH.groups$OTU))
-pruned = prune_taxa(SigOTUs,ps.norm.full)
+pruned = prune_taxa(SigOTUs,ps.norm.prune)
 taxtab = data.frame(tax_table(pruned))
 taxtab$OTU = c(taxa_names(pruned))
 df.joined.CvC.pH = merge(df.CvC.pH.groups,taxtab,by=c("OTU"))
