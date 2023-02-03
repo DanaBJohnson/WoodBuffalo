@@ -1,0 +1,17 @@
+Scripts for analyzing data associated with "Experimentally-determined traits shape bacterial community composition one and five years following wildfire"
+ 
+corncob-experiment1.R: tests for differentially abundant OTUs in unburned soil vs. soil 24 hrs post-burn using the corncob package (Martin et al. 2020)
+
+corncob-experiment2-pHclasses.R: tests for differentially abundant OTUs in unburned/burned soils after a 24 hr vs. 5 week incubation using corncob
+
+corncob-experiment3.R: tests for differentially abundant OTUs in burned vs. unburned soils following autoclaving, inoculation with unburned soil, and a 6 month incubation 
+
+create-phyloseq.R: takes seq data in form of BIOM table and list of sequence IDs and cleans up samples by removing blanks, lab standard, duplicated samples. Output is a phyloseq object with sample ID, taxonomic table, OTU table, and phylogenetic tree. 
+
+decay-model-two-pool.R: Fits two pool decay model to CO2 respiration data
+
+Manuscript-figrues.Rmd: Script to create figures in the manuscript and SI
+
+OTU-trait-list.R - compiles list of OTUs identified as differentially enriched from each experiment
+
+rrndb-SI.R: Assigns mean predicted 16S copy numbers to OTUs based on taxonomy
