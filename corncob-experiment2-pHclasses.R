@@ -1178,7 +1178,7 @@ head(df.joined)
 ### Step 7. Save output -----
 # Save output: 
 
-#write.csv(df.joined,"data/sequence-data/LibCombined/corncob-output/Manuscript/Ex2_signOTUs_3sliding_pH_categories_DryBurns_T_greater_than_50C.csv", row.names = FALSE)
+write.csv(df.joined,"data/sequence-data/LibCombined/corncob-output/Manuscript/Ex2_signOTUs_3sliding_pH_categories_byBurnTrtmt.csv", row.names = FALSE)
 
 
 

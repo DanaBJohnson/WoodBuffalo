@@ -88,7 +88,6 @@ df.ratio <- merge(df.DNA.prune, df.RNA.prune, by = c('OTU','core.id.hor.incub'))
 
 
 df.survivors <- merge(df.exp1, df.ratio, by = "OTU") %>%
-#df.survivors <- df.exp1 %>% subset(OTU %in% df.RNA.prune$OTU) %>%
   # Pull out positive responders
   subset(mu.burn.trtmt > 0) %>%
   #subset(mu.burn.trtmt > mean(mu.burn.trtmt)-1*sd(mu.burn.trtmt)) %>%
