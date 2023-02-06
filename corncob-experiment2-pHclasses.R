@@ -10,7 +10,6 @@ library(phyloseq)
 library(magrittr)
 library(dplyr)
 
-
 #setwd("C:/Users/danab/Box/WhitmanLab/Projects/WoodBuffalo/FireSim2019/")
 
 ### CORNCOB TAKES RAW SEQ DATA AS INPUT ###
@@ -37,7 +36,7 @@ ps.norm.full <- prune_samples(sample_data(ps.norm.full)$Full.id != '19UW-WB-06-0
                              sample_data(ps.norm.full)$Full.id != '19UW-WB-19-07-A-SI-duplicate' &
                             sample_data(ps.norm.full)$Full.id != '19UW-WB-08-10-O-SI', ps.norm.full)
 
-# Remove taxa with 0 abundance:
+# Remove taxa with 0 abundance and filter for only genomic DNA:
 ps.raw.prune <-  prune_samples(sample_data(ps.raw.full)$incub.trtmt %in% c('pb','SI') &
                                 sample_data(ps.raw.full)$DNA.type == 'gDNA', ps.raw.full) 
 ps.raw.prune <- prune_taxa(taxa_sums(ps.raw.prune)>0, ps.raw.prune) 
@@ -55,7 +54,7 @@ ps.norm.prune <- prune_taxa(taxa_sums(ps.norm.prune)>0, ps.norm.prune)
 #ps.raw.prune <- ps.raw.phylum
 
 
-### Step 4. Create sliding pH categories -----
+### Step 3. Create sliding pH categories -----
 
 df <- data.frame(sample_data(ps.raw.prune))
 
@@ -99,17 +98,45 @@ sample_names(ps.df) = df$Full.id
 sample_data(ps.raw.prune) <- ps.df
 
 
-### Step 4 XXX, dry burns ----
 
+
+### OPTIONAL. Set temperature cutoff for burns -----
+# # Focus on dry soil burns: 
+# ps.DNA.dry <-  prune_samples(sample_data(ps.raw.prune)$burn.trtmt != 'wet', ps.raw.prune)
+# 
+# # Create dataframe ps.DNA.dry sample_data.
+# df.dry <- data.frame(sample_data(ps.DNA.dry))
+# 
+# # Want to pull out pairs (dry burn and control) of cores in which the dry burn
+# #   core reached temps greater than some T cutoff. To do this, we need to assign
+# #   a "max temp" of the core pair to both the dry burn and the control core. 
+# df.dry <- df.dry %>%
+#   group_by(site) %>%
+#   mutate(Dry.burn.max = max(Thermo.mid.max)) 
+# 
+# # Now combine the new sample data with the original phyloseq object:
+# ps.df <- sample_data(df.dry)
+# 
+# sample_names(ps.df) = df.dry$Full.id
+# 
+# sample_data(ps.DNA.dry) <- ps.df
+# 
+# ps.DvD <- prune_samples(sample_data(ps.DNA.dry)$burn.trtmt == 'dry' &
+#                           sample_data(ps.DNA.dry)$Dry.burn.max > 50, ps.DNA.dry)
+# 
+
+
+### Step 4: Subset phyloseq by burn.trtmt and run corncob ----
 ps.DvD <- prune_samples(sample_data(ps.raw.prune)$burn.trtmt == 'dry', ps.raw.prune)
+ps.WvW <- prune_samples(sample_data(ps.raw.prune)$burn.trtmt == 'wet', ps.raw.prune)
+ps.CvC <- prune_samples(sample_data(ps.raw.prune)$burn.trtmt == 'control', ps.raw.prune)
 
-### pH 3 to 7, Dry burns, O horizon -----
-ps.corncob.DvD.O.pH3to7 <-  prune_samples(sample_data(ps.DvD)$horizon == 'O' & 
+### pH 3 to 7, Dry burns, O horizon
+ps.corncob.DvD.O.pH3to7 <-  prune_samples(sample_data(ps.DvD)$horizon == 'O' &
                                             sample_data(ps.DvD)$pH.3to7 == 'y', ps.DvD)
 
 ps.corncob.DvD.O.pH3to7 <- prune_taxa(taxa_sums(ps.corncob.DvD.O.pH3to7)>0, ps.corncob.DvD.O.pH3to7)
 ps.corncob.DvD.O.pH3to7
-
 
 # Run corncob
 dt.DvD.O.pH3to7 <- differentialTest(formula = ~incub.trtmt+pH,
@@ -120,54 +147,13 @@ dt.DvD.O.pH3to7 <- differentialTest(formula = ~incub.trtmt+pH,
                                     data=ps.corncob.DvD.O.pH3to7,
                                     fdr_cutoff = 0.05)
 
-length(dt.DvD.O.pH3to7$significant_taxa)
-# Result = 104 significant taxa
 
-
-df.DvD.O.pH3to7 = data.frame()
-
-# Loop to pull out coefficients for each taxon
-for (j in 1:length(dt.DvD.O.pH3to7$significant_taxa)){
-  # Get the significant model for that taxon
-  sig_models = dt.DvD.O.pH3to7$significant_models[[j]]
-  # Pull out the coefficients as above
-  # NOTE: you have to make sure the row reference is correct, as determined above
-  # Here we have it as 7.
-  mu_dry = data.frame(t(as.matrix(sig_models$coefficients[2,])))
-  # Also grab the p_fdr estimate for that taxon's model
-  p_fdr = dt.DvD.O.pH3to7$p_fdr[dt.DvD.O.pH3to7$significant_taxa][j]
-  # Add that estimate onto our coefficient data frame
-  mu_dry$p_fdr = p_fdr
-  # Create a column with the OTU ID
-  mu_dry$OTU= paste(row.names(data.frame(p_fdr)))
-  # Add this row onto the df dataframe, which will collect the results
-  # for all taxa as it iterates through this loop.
-  df.DvD.O.pH3to7 = rbind(df.DvD.O.pH3to7,mu_dry)
-}
-
-df.DvD.O.pH3to7$Comparison = 'pb.dry.v.SI.dry'
-df.DvD.O.pH3to7$Experiment = 'fast growth'
-df.DvD.O.pH3to7$Temp.Cutoff = 'null'
-df.DvD.O.pH3to7$pH.cutoff = '3 to 7'
-df.DvD.O.pH3to7$horizon = 'O'
-df.DvD.O.pH3to7$DNA.type = 'gDNA'
-df.DvD.O.pH3to7$Controlling.for = 'pH'
-
-colnames(df.DvD.O.pH3to7) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
-                              'DNA.type', 'Controlling.for')
-
-
-
-### pH 4 to 8, Dry burns, O horizon -----
-
-ps.corncob.DvD.O.pH4to8 <-  prune_samples(sample_data(ps.DvD)$horizon == 'O' & 
+### pH 4 to 8, Dry burns, O horizon
+ps.corncob.DvD.O.pH4to8 <-  prune_samples(sample_data(ps.DvD)$horizon == 'O' &
                                             sample_data(ps.DvD)$pH.4to8 == 'y', ps.DvD)
 
 ps.corncob.DvD.O.pH4to8 <- prune_taxa(taxa_sums(ps.corncob.DvD.O.pH4to8)>0, ps.corncob.DvD.O.pH4to8)
-sample_names(ps.corncob.DvD.O.pH4to8)
 ps.corncob.DvD.O.pH4to8
-
 
 # Run corncob
 dt.DvD.O.pH4to8 <- differentialTest(formula = ~incub.trtmt+pH,
@@ -177,45 +163,11 @@ dt.DvD.O.pH4to8 <- differentialTest(formula = ~incub.trtmt+pH,
                                     test = 'Wald',boot=FALSE,
                                     data=ps.corncob.DvD.O.pH4to8,
                                     fdr_cutoff = 0.05)
-length(dt.DvD.O.pH4to8$significant_taxa)
-# Result = 140 significant taxa
 
 
-df.DvD.O.pH4to8 = data.frame()
 
-# Loop to pull out coefficients for each taxon
-for (j in 1:length(dt.DvD.O.pH4to8$significant_taxa)){
-  # Get the significant model for that taxon
-  sig_models = dt.DvD.O.pH4to8$significant_models[[j]]
-  # Pull out the coefficients as above
-  # NOTE: you have to make sure the row reference is correct, as determined above
-  # Here we have it as 7.
-  mu_dry = data.frame(t(as.matrix(sig_models$coefficients[2,])))
-  # Also grab the p_fdr estimate for that taxon's model
-  p_fdr = dt.DvD.O.pH4to8$p_fdr[dt.DvD.O.pH4to8$significant_taxa][j]
-  # Add that estimate onto our coefficient data frame
-  mu_dry$p_fdr = p_fdr
-  # Create a column with the OTU ID
-  mu_dry$OTU= paste(row.names(data.frame(p_fdr)))
-  # Add this row onto the df dataframe, which will collect the results
-  # for all taxa as it iterates through this loop.
-  df.DvD.O.pH4to8 = rbind(df.DvD.O.pH4to8,mu_dry)
-}
-
-df.DvD.O.pH4to8$Comparison = 'pb.dry.v.SI.dry'
-df.DvD.O.pH4to8$Experiment = 'fast growth'
-df.DvD.O.pH4to8$Temp.Cutoff = 'null'
-df.DvD.O.pH4to8$pH.cutoff = '4 to 8'
-df.DvD.O.pH4to8$horizon = 'O'
-df.DvD.O.pH4to8$DNA.type = 'gDNA'
-df.DvD.O.pH4to8$Controlling.for = 'pH'
-
-colnames(df.DvD.O.pH4to8) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
-                              'DNA.type', 'Controlling.for')
-
-### pH 5 to 9, Dry burns, O horizon -----
-ps.corncob.DvD.O.pH5to9 <-  prune_samples(sample_data(ps.DvD)$horizon == 'O' & 
+### pH 5 to 9, Dry burns, O horizon
+ps.corncob.DvD.O.pH5to9 <-  prune_samples(sample_data(ps.DvD)$horizon == 'O' &
                                             sample_data(ps.DvD)$pH.5to9 == 'y', ps.DvD)
 
 ps.corncob.DvD.O.pH5to9 <- prune_taxa(taxa_sums(ps.corncob.DvD.O.pH5to9)>0, ps.corncob.DvD.O.pH5to9)
@@ -231,49 +183,14 @@ dt.DvD.O.pH5to9 <- differentialTest(formula = ~incub.trtmt+pH,
                                     test = 'Wald',boot=FALSE,
                                     data=ps.corncob.DvD.O.pH5to9,
                                     fdr_cutoff = 0.05)
-length(dt.DvD.O.pH5to9$significant_taxa)
-# Result = 89 significant taxa
 
-df.DvD.O.pH5to9 = data.frame()
 
-# Loop to pull out coefficients for each taxon
-for (j in 1:length(dt.DvD.O.pH5to9$significant_taxa)){
-  # Get the significant model for that taxon
-  sig_models = dt.DvD.O.pH5to9$significant_models[[j]]
-  # Pull out the coefficients as above
-  # NOTE: you have to make sure the row reference is correct, as determined above
-  # Here we have it as 7.
-  mu_dry = data.frame(t(as.matrix(sig_models$coefficients[2,])))
-  # Also grab the p_fdr estimate for that taxon's model
-  p_fdr = dt.DvD.O.pH5to9$p_fdr[dt.DvD.O.pH5to9$significant_taxa][j]
-  # Add that estimate onto our coefficient data frame
-  mu_dry$p_fdr = p_fdr
-  # Create a column with the OTU ID
-  mu_dry$OTU= paste(row.names(data.frame(p_fdr)))
-  # Add this row onto the df dataframe, which will collect the results
-  # for all taxa as it iterates through this loop.
-  df.DvD.O.pH5to9 = rbind(df.DvD.O.pH5to9,mu_dry)
-}
-
-df.DvD.O.pH5to9$Comparison = 'pb.dry.v.SI.dry'
-df.DvD.O.pH5to9$Experiment = 'fast growth'
-df.DvD.O.pH5to9$Temp.Cutoff = 'null'
-df.DvD.O.pH5to9$pH.cutoff = '5 to 9'
-df.DvD.O.pH5to9$horizon = 'O'
-df.DvD.O.pH5to9$DNA.type = 'gDNA'
-df.DvD.O.pH5to9$Controlling.for = 'pH'
-
-colnames(df.DvD.O.pH5to9) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
-                              'DNA.type', 'Controlling.for')
-
-### pH 3 to 7, Dry burns, A horizon -----
-ps.corncob.DvD.A.pH3to7 <-  prune_samples(sample_data(ps.DvD)$horizon == 'A' & 
+### pH 3 to 7, Dry burns, A horizon
+ps.corncob.DvD.A.pH3to7 <-  prune_samples(sample_data(ps.DvD)$horizon == 'A' &
                                             sample_data(ps.DvD)$pH.3to7 == 'y', ps.DvD)
 
 ps.corncob.DvD.A.pH3to7 <- prune_taxa(taxa_sums(ps.corncob.DvD.A.pH3to7)>0, ps.corncob.DvD.A.pH3to7)
 ps.corncob.DvD.A.pH3to7
-
 
 # Run corncob
 dt.DvD.A.pH3to7 <- differentialTest(formula = ~incub.trtmt+pH,
@@ -283,47 +200,10 @@ dt.DvD.A.pH3to7 <- differentialTest(formula = ~incub.trtmt+pH,
                                     test = 'Wald',boot=FALSE,
                                     data=ps.corncob.DvD.A.pH3to7,
                                     fdr_cutoff = 0.05)
-length(dt.DvD.A.pH3to7$significant_taxa)
-# Result = 30 significant taxa
 
 
-
-df.DvD.A.pH3to7 = data.frame()
-
-# Loop to pull out coefficients for each taxon
-for (j in 1:length(dt.DvD.A.pH3to7$significant_taxa)){
-  # Get the significant model for that taxon
-  sig_models = dt.DvD.A.pH3to7$significant_models[[j]]
-  # Pull out the coefficients as above
-  # NATE: you have to make sure the row reference is correct, as determined above
-  # Here we have it as 7.
-  mu_dry = data.frame(t(as.matrix(sig_models$coefficients[2,])))
-  # Also grab the p_fdr estimate for that taxon's model
-  p_fdr = dt.DvD.A.pH3to7$p_fdr[dt.DvD.A.pH3to7$significant_taxa][j]
-  # Add that estimate onto our coefficient data frame
-  mu_dry$p_fdr = p_fdr
-  # Create a column with the ATU ID
-  mu_dry$ATU= paste(row.names(data.frame(p_fdr)))
-  # Add this row onto the df dataframe, which will collect the results
-  # for all taxa as it iterates through this loop.
-  df.DvD.A.pH3to7 = rbind(df.DvD.A.pH3to7,mu_dry)
-}
-
-df.DvD.A.pH3to7$Comparison = 'pb.dry.v.SI.dry'
-df.DvD.A.pH3to7$Experiment = 'fast growth'
-df.DvD.A.pH3to7$Temp.Cutoff = 'null'
-df.DvD.A.pH3to7$pH.cutoff = '3 to 7'
-df.DvD.A.pH3to7$horizon = 'A'
-df.DvD.A.pH3to7$DNA.type = 'gDNA'
-df.DvD.A.pH3to7$Controlling.for = 'pH'
-
-colnames(df.DvD.A.pH3to7) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
-                              'DNA.type', 'Controlling.for')
-
-### pH 4 to 8, Dry burns, A horizon -----
-
-ps.corncob.DvD.A.pH4to8 <-  prune_samples(sample_data(ps.DvD)$horizon == 'A' & 
+### pH 4 to 8, Dry burns, A horizon
+ps.corncob.DvD.A.pH4to8 <-  prune_samples(sample_data(ps.DvD)$horizon == 'A' &
                                             sample_data(ps.DvD)$pH.4to8 == 'y', ps.DvD)
 
 ps.corncob.DvD.A.pH4to8 <- prune_taxa(taxa_sums(ps.corncob.DvD.A.pH4to8)>0, ps.corncob.DvD.A.pH4to8)
@@ -337,45 +217,10 @@ dt.DvD.A.pH4to8 <- differentialTest(formula = ~incub.trtmt+pH,
                                     test = 'Wald',boot=FALSE,
                                     data=ps.corncob.DvD.A.pH4to8,
                                     fdr_cutoff = 0.05)
-length(dt.DvD.A.pH4to8$significant_taxa)
-# Result = 54 significant taxa
 
 
-df.DvD.A.pH4to8 = data.frame()
-
-# Loop to pull out coefficients for each taxon
-for (j in 1:length(dt.DvD.A.pH4to8$significant_taxa)){
-  # Get the significant model for that taxon
-  sig_models = dt.DvD.A.pH4to8$significant_models[[j]]
-  # Pull out the coefficients as above
-  # NATE: you have to make sure the row reference is correct, as determined above
-  # Here we have it as 7.
-  mu_dry = data.frame(t(as.matrix(sig_models$coefficients[2,])))
-  # Also grab the p_fdr estimate for that taxon's model
-  p_fdr = dt.DvD.A.pH4to8$p_fdr[dt.DvD.A.pH4to8$significant_taxa][j]
-  # Add that estimate onto our coefficient data frame
-  mu_dry$p_fdr = p_fdr
-  # Create a column with the ATU ID
-  mu_dry$ATU= paste(row.names(data.frame(p_fdr)))
-  # Add this row onto the df dataframe, which will collect the results
-  # for all taxa as it iterates through this loop.
-  df.DvD.A.pH4to8 = rbind(df.DvD.A.pH4to8,mu_dry)
-}
-
-df.DvD.A.pH4to8$Comparison = 'pb.dry.v.SI.dry'
-df.DvD.A.pH4to8$Experiment = 'fast growth'
-df.DvD.A.pH4to8$Temp.Cutoff = 'null'
-df.DvD.A.pH4to8$pH.cutoff = '4 to 8'
-df.DvD.A.pH4to8$horizon = 'A'
-df.DvD.A.pH4to8$DNA.type = 'gDNA'
-df.DvD.A.pH4to8$Controlling.for = 'pH'
-
-colnames(df.DvD.A.pH4to8) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
-                              'DNA.type', 'Controlling.for')
-
-### pH 5 to 9, Dry burns, A horizon -----
-ps.corncob.DvD.A.pH5to9 <-  prune_samples(sample_data(ps.DvD)$horizon == 'A' & 
+### pH 5 to 9, Dry burns, A horizon
+ps.corncob.DvD.A.pH5to9 <-  prune_samples(sample_data(ps.DvD)$horizon == 'A' &
                                             sample_data(ps.DvD)$pH.5to9 == 'y', ps.DvD)
 
 ps.corncob.DvD.A.pH5to9 <- prune_taxa(taxa_sums(ps.corncob.DvD.A.pH5to9)>0, ps.corncob.DvD.A.pH5to9)
@@ -390,81 +235,15 @@ dt.DvD.A.pH5to9 <- differentialTest(formula = ~incub.trtmt+pH,
                                     test = 'Wald',boot=FALSE,
                                     data=ps.corncob.DvD.A.pH5to9,
                                     fdr_cutoff = 0.05)
-length(dt.DvD.A.pH5to9$significant_taxa)
-# Result = 96 significant taxa
-
-
-df.DvD.A.pH5to9 = data.frame()
-
-# Loop to pull out coefficients for each taxon
-for (j in 1:length(dt.DvD.A.pH5to9$significant_taxa)){
-  # Get the significant model for that taxon
-  sig_models = dt.DvD.A.pH5to9$significant_models[[j]]
-  # Pull out the coefficients as above
-  # NATE: you have to make sure the row reference is correct, as determined above
-  # Here we have it as 7.
-  mu_dry = data.frame(t(as.matrix(sig_models$coefficients[2,])))
-  # Also grab the p_fdr estimate for that taxon's model
-  p_fdr = dt.DvD.A.pH5to9$p_fdr[dt.DvD.A.pH5to9$significant_taxa][j]
-  # Add that estimate onto our coefficient data frame
-  mu_dry$p_fdr = p_fdr
-  # Create a column with the ATU ID
-  mu_dry$ATU= paste(row.names(data.frame(p_fdr)))
-  # Add this row onto the df dataframe, which will collect the results
-  # for all taxa as it iterates through this loop.
-  df.DvD.A.pH5to9 = rbind(df.DvD.A.pH5to9,mu_dry)
-}
-
-df.DvD.A.pH5to9$Comparison = 'pb.dry.v.SI.dry'
-df.DvD.A.pH5to9$Experiment = 'fast growth'
-df.DvD.A.pH5to9$Temp.Cutoff = 'null'
-df.DvD.A.pH5to9$pH.cutoff = '5 to 9'
-df.DvD.A.pH5to9$horizon = 'A'
-df.DvD.A.pH5to9$DNA.type = 'gDNA'
-df.DvD.A.pH5to9$Controlling.for = 'pH'
-
-colnames(df.DvD.A.pH5to9) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
-                              'DNA.type', 'Controlling.for')
-
-
-### Combine pH category output -----
-df.DvD.pH.groups <- rbind(df.DvD.O.pH3to7,df.DvD.O.pH4to8,df.DvD.O.pH5to9,
-                          df.DvD.A.pH3to7,df.DvD.A.pH4to8,df.DvD.A.pH5to9)
 
 
 
-dim(df.DvD.O.pH3to7)
-dim(df.DvD.O.pH4to8)
-dim(df.DvD.O.pH5to9)
-dim(df.DvD.A.pH3to7)
-dim(df.DvD.A.pH4to8)
-dim(df.DvD.A.pH5to9)
-
-
-
-# Let's bring back in our taxonomy from the tax table
-SigOTUs = levels(as.factor(df.DvD.pH.groups$OTU))
-pruned = prune_taxa(SigOTUs,ps.norm.full)
-taxtab = data.frame(tax_table(pruned))
-taxtab$OTU = c(taxa_names(pruned))
-df.joined.DvD.pH = merge(df.DvD.pH.groups,taxtab,by=c("OTU"))
-head(df.joined.DvD.pH)
-
-
-
-
-# EXPERIMENT 2 - pH categories, wet -----
-
-ps.WvW <- prune_samples(sample_data(ps.raw.prune)$burn.trtmt == 'wet', ps.raw.prune)
-
-### pH 3 to 7, wet burns, O horizon -----
-ps.corncob.WvW.O.pH3to7 <-  prune_samples(sample_data(ps.WvW)$horizon == 'O' & 
+### pH 3 to 7, wet burns, O horizon
+ps.corncob.WvW.O.pH3to7 <-  prune_samples(sample_data(ps.WvW)$horizon == 'O' &
                                             sample_data(ps.WvW)$pH.3to7 == 'y', ps.WvW)
 
 ps.corncob.WvW.O.pH3to7 <- prune_taxa(taxa_sums(ps.corncob.WvW.O.pH3to7)>0, ps.corncob.WvW.O.pH3to7)
 ps.corncob.WvW.O.pH3to7
-
 
 # Run corncob
 dt.WvW.O.pH3to7 <- differentialTest(formula = ~incub.trtmt+pH,
@@ -475,43 +254,10 @@ dt.WvW.O.pH3to7 <- differentialTest(formula = ~incub.trtmt+pH,
                                     data=ps.corncob.WvW.O.pH3to7,
                                     fdr_cutoff = 0.05)
 
-df.WvW.O.pH3to7 = data.frame()
-
-# Loop to pull out coefficients for each taxon
-for (j in 1:length(dt.WvW.O.pH3to7$significant_taxa)){
-  # Get the significant model for that taxon
-  sig_models = dt.WvW.O.pH3to7$significant_models[[j]]
-  # Pull out the coefficients as above
-  # NOTE: you have to make sure the row reference is correct, as determined above
-  # Here we have it as 7.
-  mu_wet = data.frame(t(as.matrix(sig_models$coefficients[2,])))
-  # Also grab the p_fdr estimate for that taxon's model
-  p_fdr = dt.WvW.O.pH3to7$p_fdr[dt.WvW.O.pH3to7$significant_taxa][j]
-  # Add that estimate onto our coefficient data frame
-  mu_wet$p_fdr = p_fdr
-  # Create a column with the OTU ID
-  mu_wet$OTU= paste(row.names(data.frame(p_fdr)))
-  # Add this row onto the df dataframe, which will collect the results
-  # for all taxa as it iterates through this loop.
-  df.WvW.O.pH3to7 = rbind(df.WvW.O.pH3to7,mu_wet)
-}
-
-df.WvW.O.pH3to7$Comparison = 'pb.wet.v.SI.wet'
-df.WvW.O.pH3to7$Experiment = 'fast growth'
-df.WvW.O.pH3to7$Temp.Cutoff = 'null'
-df.WvW.O.pH3to7$pH.cutoff = '3 to 7'
-df.WvW.O.pH3to7$horizon = 'O'
-df.WvW.O.pH3to7$DNA.type = 'gDNA'
-df.WvW.O.pH3to7$Controlling.for = 'pH'
-
-colnames(df.WvW.O.pH3to7) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
-                              'DNA.type', 'Controlling.for')
 
 
-### pH 4 to 8, wet burns, O horizon -----
-
-ps.corncob.WvW.O.pH4to8 <-  prune_samples(sample_data(ps.WvW)$horizon == 'O' & 
+### pH 4 to 8, wet burns, O horizon
+ps.corncob.WvW.O.pH4to8 <-  prune_samples(sample_data(ps.WvW)$horizon == 'O' &
                                             sample_data(ps.WvW)$pH.4to8 == 'y', ps.WvW)
 
 ps.corncob.WvW.O.pH4to8 <- prune_taxa(taxa_sums(ps.corncob.WvW.O.pH4to8)>0, ps.corncob.WvW.O.pH4to8)
@@ -526,44 +272,10 @@ dt.WvW.O.pH4to8 <- differentialTest(formula = ~incub.trtmt+pH,
                                     data=ps.corncob.WvW.O.pH4to8,
                                     fdr_cutoff = 0.05)
 
-df.WvW.O.pH4to8 = data.frame()
-
-# Loop to pull out coefficients for each taxon
-for (j in 1:length(dt.WvW.O.pH4to8$significant_taxa)){
-  # Get the significant model for that taxon
-  sig_models = dt.WvW.O.pH4to8$significant_models[[j]]
-  # Pull out the coefficients as above
-  # NOTE: you have to make sure the row reference is correct, as determined above
-  # Here we have it as 7.
-  mu_wet = data.frame(t(as.matrix(sig_models$coefficients[2,])))
-  # Also grab the p_fdr estimate for that taxon's model
-  p_fdr = dt.WvW.O.pH4to8$p_fdr[dt.WvW.O.pH4to8$significant_taxa][j]
-  # Add that estimate onto our coefficient data frame
-  mu_wet$p_fdr = p_fdr
-  # Create a column with the OTU ID
-  mu_wet$OTU= paste(row.names(data.frame(p_fdr)))
-  # Add this row onto the df dataframe, which will collect the results
-  # for all taxa as it iterates through this loop.
-  df.WvW.O.pH4to8 = rbind(df.WvW.O.pH4to8,mu_wet)
-}
-
-df.WvW.O.pH4to8$Comparison = 'pb.wet.v.SI.wet'
-df.WvW.O.pH4to8$Experiment = 'fast growth'
-df.WvW.O.pH4to8$Temp.Cutoff = 'null'
-df.WvW.O.pH4to8$pH.cutoff = '4 to 8'
-df.WvW.O.pH4to8$horizon = 'O'
-df.WvW.O.pH4to8$DNA.type = 'gDNA'
-df.WvW.O.pH4to8$Controlling.for = 'pH'
-
-colnames(df.WvW.O.pH4to8) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
-                              'DNA.type', 'Controlling.for')
 
 
-
-
-### pH 5 to 9, wet burns, O horizon -----
-ps.corncob.WvW.O.pH5to9 <-  prune_samples(sample_data(ps.WvW)$horizon == 'O' & 
+### pH 5 to 9, wet burns, O horizon
+ps.corncob.WvW.O.pH5to9 <-  prune_samples(sample_data(ps.WvW)$horizon == 'O' &
                                             sample_data(ps.WvW)$pH.5to9 == 'y', ps.WvW)
 
 ps.corncob.WvW.O.pH5to9 <- prune_taxa(taxa_sums(ps.corncob.WvW.O.pH5to9)>0, ps.corncob.WvW.O.pH5to9)
@@ -579,47 +291,14 @@ dt.WvW.O.pH5to9 <- differentialTest(formula = ~incub.trtmt+pH,
                                     data=ps.corncob.WvW.O.pH5to9,
                                     fdr_cutoff = 0.05)
 
-df.WvW.O.pH5to9 = data.frame()
-
-# Loop to pull out coefficients for each taxon
-for (j in 1:length(dt.WvW.O.pH5to9$significant_taxa)){
-  # Get the significant model for that taxon
-  sig_models = dt.WvW.O.pH5to9$significant_models[[j]]
-  # Pull out the coefficients as above
-  # NOTE: you have to make sure the row reference is correct, as determined above
-  # Here we have it as 7.
-  mu_wet = data.frame(t(as.matrix(sig_models$coefficients[2,])))
-  # Also grab the p_fdr estimate for that taxon's model
-  p_fdr = dt.WvW.O.pH5to9$p_fdr[dt.WvW.O.pH5to9$significant_taxa][j]
-  # Add that estimate onto our coefficient data frame
-  mu_wet$p_fdr = p_fdr
-  # Create a column with the OTU ID
-  mu_wet$OTU= paste(row.names(data.frame(p_fdr)))
-  # Add this row onto the df dataframe, which will collect the results
-  # for all taxa as it iterates through this loop.
-  df.WvW.O.pH5to9 = rbind(df.WvW.O.pH5to9,mu_wet)
-}
-
-df.WvW.O.pH5to9$Comparison = 'pb.wet.v.SI.wet'
-df.WvW.O.pH5to9$Experiment = 'fast growth'
-df.WvW.O.pH5to9$Temp.Cutoff = 'null'
-df.WvW.O.pH5to9$pH.cutoff = '5 to 9'
-df.WvW.O.pH5to9$horizon = 'O'
-df.WvW.O.pH5to9$DNA.type = 'gDNA'
-df.WvW.O.pH5to9$Controlling.for = 'pH'
-
-colnames(df.WvW.O.pH5to9) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
-                              'DNA.type', 'Controlling.for')
 
 
-### pH 3 to 7, wet burns, A horizon -----
-ps.corncob.WvW.A.pH3to7 <-  prune_samples(sample_data(ps.WvW)$horizon == 'A' & 
+### pH 3 to 7, wet burns, A horizon
+ps.corncob.WvW.A.pH3to7 <-  prune_samples(sample_data(ps.WvW)$horizon == 'A' &
                                             sample_data(ps.WvW)$pH.3to7 == 'y', ps.WvW)
 
 ps.corncob.WvW.A.pH3to7 <- prune_taxa(taxa_sums(ps.corncob.WvW.A.pH3to7)>0, ps.corncob.WvW.A.pH3to7)
 ps.corncob.WvW.A.pH3to7
-
 
 # Run corncob
 dt.WvW.A.pH3to7 <- differentialTest(formula = ~incub.trtmt+pH,
@@ -630,42 +309,10 @@ dt.WvW.A.pH3to7 <- differentialTest(formula = ~incub.trtmt+pH,
                                     data=ps.corncob.WvW.A.pH3to7,
                                     fdr_cutoff = 0.05)
 
-df.WvW.A.pH3to7 = data.frame()
 
-# Loop to pull out coefficients for each taxon
-for (j in 1:length(dt.WvW.A.pH3to7$significant_taxa)){
-  # Get the significant model for that taxon
-  sig_models = dt.WvW.A.pH3to7$significant_models[[j]]
-  # Pull out the coefficients as above
-  # NATE: you have to make sure the row reference is correct, as determined above
-  # Here we have it as 7.
-  mu_wet = data.frame(t(as.matrix(sig_models$coefficients[2,])))
-  # Also grab the p_fdr estimate for that taxon's model
-  p_fdr = dt.WvW.A.pH3to7$p_fdr[dt.WvW.A.pH3to7$significant_taxa][j]
-  # Add that estimate onto our coefficient data frame
-  mu_wet$p_fdr = p_fdr
-  # Create a column with the ATU ID
-  mu_wet$ATU= paste(row.names(data.frame(p_fdr)))
-  # Add this row onto the df dataframe, which will collect the results
-  # for all taxa as it iterates through this loop.
-  df.WvW.A.pH3to7 = rbind(df.WvW.A.pH3to7,mu_wet)
-}
 
-df.WvW.A.pH3to7$Comparison = 'pb.wet.v.SI.wet'
-df.WvW.A.pH3to7$Experiment = 'fast growth'
-df.WvW.A.pH3to7$Temp.Cutoff = 'null'
-df.WvW.A.pH3to7$pH.cutoff = '3 to 7'
-df.WvW.A.pH3to7$horizon = 'A'
-df.WvW.A.pH3to7$DNA.type = 'gDNA'
-df.WvW.A.pH3to7$Controlling.for = 'pH'
-
-colnames(df.WvW.A.pH3to7) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
-                              'DNA.type', 'Controlling.for')
-
-### pH 4 to 8, wet burns, A horizon -----
-
-ps.corncob.WvW.A.pH4to8 <-  prune_samples(sample_data(ps.WvW)$horizon == 'A' & 
+### pH 4 to 8, wet burns, A horizon
+ps.corncob.WvW.A.pH4to8 <-  prune_samples(sample_data(ps.WvW)$horizon == 'A' &
                                             sample_data(ps.WvW)$pH.4to8 == 'y', ps.WvW)
 
 ps.corncob.WvW.A.pH4to8 <- prune_taxa(taxa_sums(ps.corncob.WvW.A.pH4to8)>0, ps.corncob.WvW.A.pH4to8)
@@ -680,46 +327,14 @@ dt.WvW.A.pH4to8 <- differentialTest(formula = ~incub.trtmt+pH,
                                     data=ps.corncob.WvW.A.pH4to8,
                                     fdr_cutoff = 0.05)
 
-df.WvW.A.pH4to8 = data.frame()
 
-# Loop to pull out coefficients for each taxon
-for (j in 1:length(dt.WvW.A.pH4to8$significant_taxa)){
-  # Get the significant model for that taxon
-  sig_models = dt.WvW.A.pH4to8$significant_models[[j]]
-  # Pull out the coefficients as above
-  # NATE: you have to make sure the row reference is correct, as determined above
-  # Here we have it as 7.
-  mu_wet = data.frame(t(as.matrix(sig_models$coefficients[2,])))
-  # Also grab the p_fdr estimate for that taxon's model
-  p_fdr = dt.WvW.A.pH4to8$p_fdr[dt.WvW.A.pH4to8$significant_taxa][j]
-  # Add that estimate onto our coefficient data frame
-  mu_wet$p_fdr = p_fdr
-  # Create a column with the ATU ID
-  mu_wet$ATU= paste(row.names(data.frame(p_fdr)))
-  # Add this row onto the df dataframe, which will collect the results
-  # for all taxa as it iterates through this loop.
-  df.WvW.A.pH4to8 = rbind(df.WvW.A.pH4to8,mu_wet)
-}
 
-df.WvW.A.pH4to8$Comparison = 'pb.wet.v.SI.wet'
-df.WvW.A.pH4to8$Experiment = 'fast growth'
-df.WvW.A.pH4to8$Temp.Cutoff = 'null'
-df.WvW.A.pH4to8$pH.cutoff = '4 to 8'
-df.WvW.A.pH4to8$horizon = 'A'
-df.WvW.A.pH4to8$DNA.type = 'gDNA'
-df.WvW.A.pH4to8$Controlling.for = 'pH'
-
-colnames(df.WvW.A.pH4to8) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
-                              'DNA.type', 'Controlling.for')
-
-### pH 5 to 9, wet burns, A horizon -----
-ps.corncob.WvW.A.pH5to9 <-  prune_samples(sample_data(ps.WvW)$horizon == 'A' & 
+### pH 5 to 9, wet burns, A horizon
+ps.corncob.WvW.A.pH5to9 <-  prune_samples(sample_data(ps.WvW)$horizon == 'A' &
                                             sample_data(ps.WvW)$pH.5to9 == 'y', ps.WvW)
 
 ps.corncob.WvW.A.pH5to9 <- prune_taxa(taxa_sums(ps.corncob.WvW.A.pH5to9)>0, ps.corncob.WvW.A.pH5to9)
 ps.corncob.WvW.A.pH5to9
-
 
 # Run corncob
 dt.WvW.A.pH5to9 <- differentialTest(formula = ~incub.trtmt+pH,
@@ -730,89 +345,14 @@ dt.WvW.A.pH5to9 <- differentialTest(formula = ~incub.trtmt+pH,
                                     data=ps.corncob.WvW.A.pH5to9,
                                     fdr_cutoff = 0.05)
 
-df.WvW.A.pH5to9 = data.frame()
-
-# Loop to pull out coefficients for each taxon
-for (j in 1:length(dt.WvW.A.pH5to9$significant_taxa)){
-  # Get the significant model for that taxon
-  sig_models = dt.WvW.A.pH5to9$significant_models[[j]]
-  # Pull out the coefficients as above
-  # NATE: you have to make sure the row reference is correct, as determined above
-  # Here we have it as 7.
-  mu_wet = data.frame(t(as.matrix(sig_models$coefficients[2,])))
-  # Also grab the p_fdr estimate for that taxon's model
-  p_fdr = dt.WvW.A.pH5to9$p_fdr[dt.WvW.A.pH5to9$significant_taxa][j]
-  # Add that estimate onto our coefficient data frame
-  mu_wet$p_fdr = p_fdr
-  # Create a column with the ATU ID
-  mu_wet$ATU= paste(row.names(data.frame(p_fdr)))
-  # Add this row onto the df dataframe, which will collect the results
-  # for all taxa as it iterates through this loop.
-  df.WvW.A.pH5to9 = rbind(df.WvW.A.pH5to9,mu_wet)
-}
-
-df.WvW.A.pH5to9$Comparison = 'pb.wet.v.SI.wet'
-df.WvW.A.pH5to9$Experiment = 'fast growth'
-df.WvW.A.pH5to9$Temp.Cutoff = 'null'
-df.WvW.A.pH5to9$pH.cutoff = '5 to 9'
-df.WvW.A.pH5to9$horizon = 'A'
-df.WvW.A.pH5to9$DNA.type = 'gDNA'
-df.WvW.A.pH5to9$Controlling.for = 'pH'
-
-colnames(df.WvW.A.pH5to9) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
-                              'DNA.type', 'Controlling.for')
-
-### Combine pH category output -----
-ps.corncob.WvW.O.pH3to7
-ps.corncob.WvW.O.pH4to8
-ps.corncob.WvW.O.pH5to9
-ps.corncob.WvW.A.pH3to7
-ps.corncob.WvW.A.pH4to8
-ps.corncob.WvW.A.pH5to9
-
-length(dt.WvW.O.pH3to7$significant_taxa)
-length(dt.WvW.O.pH4to8$significant_taxa)
-length(dt.WvW.O.pH5to9$significant_taxa)
-length(dt.WvW.A.pH3to7$significant_taxa)
-length(dt.WvW.A.pH4to8$significant_taxa)
-length(dt.WvW.A.pH5to9$significant_taxa)
-
-df.WvW.pH.groups <- rbind(df.WvW.O.pH3to7,
-                          df.WvW.O.pH4to8,
-                          df.WvW.O.pH5to9,
-                          df.WvW.A.pH3to7,
-                          df.WvW.A.pH4to8,
-                          df.WvW.A.pH5to9)
 
 
-dim(df.WvW.O.pH3to7)
-dim(df.WvW.O.pH4to8)
-dim(df.WvW.O.pH5to9)
-dim(df.WvW.A.pH3to7)
-dim(df.WvW.A.pH4to8)
-dim(df.WvW.A.pH5to9)
-
-# Let's bring back in our taxonomy from the tax table
-SigOTUs = levels(as.factor(df.WvW.pH.groups$OTU))
-pruned = prune_taxa(SigOTUs,ps.norm.prune)
-taxtab = data.frame(tax_table(pruned))
-taxtab$OTU = c(taxa_names(pruned))
-df.joined.WvW.pH = merge(df.WvW.pH.groups,taxtab,by=c("OTU"))
-head(df.joined.WvW.pH)
-
-
-# EXPERIMENT 2 - pH categories, control -----
-
-ps.CvC <- prune_samples(sample_data(ps.raw.prune)$burn.trtmt == 'control', ps.raw.prune)
-
-### pH 3 to 7, control burns, O horizon -----
-ps.corncob.CvC.O.pH3to7 <-  prune_samples(sample_data(ps.CvC)$horizon == 'O' & 
+### pH 3 to 7, control burns, O horizon
+ps.corncob.CvC.O.pH3to7 <-  prune_samples(sample_data(ps.CvC)$horizon == 'O' &
                                             sample_data(ps.CvC)$pH.3to7 == 'y', ps.CvC)
 
 ps.corncob.CvC.O.pH3to7 <- prune_taxa(taxa_sums(ps.corncob.CvC.O.pH3to7)>0, ps.corncob.CvC.O.pH3to7)
 ps.corncob.CvC.O.pH3to7
-
 
 # Run corncob
 dt.CvC.O.pH3to7 <- differentialTest(formula = ~incub.trtmt+pH,
@@ -823,42 +363,10 @@ dt.CvC.O.pH3to7 <- differentialTest(formula = ~incub.trtmt+pH,
                                     data=ps.corncob.CvC.O.pH3to7,
                                     fdr_cutoff = 0.05)
 
-df.CvC.O.pH3to7 = data.frame()
 
-# Loop to pull out coefficients for each taxon
-for (j in 1:length(dt.CvC.O.pH3to7$significant_taxa)){
-  # Get the significant model for that taxon
-  sig_models = dt.CvC.O.pH3to7$significant_models[[j]]
-  # Pull out the coefficients as above
-  # NOTE: you have to make sure the row reference is correct, as determined above
-  # Here we have it as 7.
-  mu_control = data.frame(t(as.matrix(sig_models$coefficients[2,])))
-  # Also grab the p_fdr estimate for that taxon's model
-  p_fdr = dt.CvC.O.pH3to7$p_fdr[dt.CvC.O.pH3to7$significant_taxa][j]
-  # Add that estimate onto our coefficient data frame
-  mu_control$p_fdr = p_fdr
-  # Create a column with the OTU ID
-  mu_control$OTU= paste(row.names(data.frame(p_fdr)))
-  # Add this row onto the df dataframe, which will collect the results
-  # for all taxa as it iterates through this loop.
-  df.CvC.O.pH3to7 = rbind(df.CvC.O.pH3to7,mu_control)
-}
 
-df.CvC.O.pH3to7$Comparison = 'pb.control.v.SI.control'
-df.CvC.O.pH3to7$Experiment = 'fast growth'
-df.CvC.O.pH3to7$Temp.Cutoff = 'null'
-df.CvC.O.pH3to7$pH.cutoff = '3 to 7'
-df.CvC.O.pH3to7$horizon = 'O'
-df.CvC.O.pH3to7$DNA.type = 'gDNA'
-df.CvC.O.pH3to7$Controlling.for = 'pH'
-
-colnames(df.CvC.O.pH3to7) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
-                              'DNA.type', 'Controlling.for')
-
-### pH 4 to 8, control burns, O horizon -----
-
-ps.corncob.CvC.O.pH4to8 <-  prune_samples(sample_data(ps.CvC)$horizon == 'O' & 
+### pH 4 to 8, control burns, O horizon
+ps.corncob.CvC.O.pH4to8 <-  prune_samples(sample_data(ps.CvC)$horizon == 'O' &
                                             sample_data(ps.CvC)$pH.4to8 == 'y', ps.CvC)
 
 ps.corncob.CvC.O.pH4to8 <- prune_taxa(taxa_sums(ps.corncob.CvC.O.pH4to8)>0, ps.corncob.CvC.O.pH4to8)
@@ -873,46 +381,14 @@ dt.CvC.O.pH4to8 <- differentialTest(formula = ~incub.trtmt+pH,
                                     data=ps.corncob.CvC.O.pH4to8,
                                     fdr_cutoff = 0.05)
 
-df.CvC.O.pH4to8 = data.frame()
 
-# Loop to pull out coefficients for each taxon
-for (j in 1:length(dt.CvC.O.pH4to8$significant_taxa)){
-  # Get the significant model for that taxon
-  sig_models = dt.CvC.O.pH4to8$significant_models[[j]]
-  # Pull out the coefficients as above
-  # NOTE: you have to make sure the row reference is correct, as determined above
-  # Here we have it as 7.
-  mu_control = data.frame(t(as.matrix(sig_models$coefficients[2,])))
-  # Also grab the p_fdr estimate for that taxon's model
-  p_fdr = dt.CvC.O.pH4to8$p_fdr[dt.CvC.O.pH4to8$significant_taxa][j]
-  # Add that estimate onto our coefficient data frame
-  mu_control$p_fdr = p_fdr
-  # Create a column with the OTU ID
-  mu_control$OTU= paste(row.names(data.frame(p_fdr)))
-  # Add this row onto the df dataframe, which will collect the results
-  # for all taxa as it iterates through this loop.
-  df.CvC.O.pH4to8 = rbind(df.CvC.O.pH4to8,mu_control)
-}
 
-df.CvC.O.pH4to8$Comparison = 'pb.control.v.SI.control'
-df.CvC.O.pH4to8$Experiment = 'fast growth'
-df.CvC.O.pH4to8$Temp.Cutoff = 'null'
-df.CvC.O.pH4to8$pH.cutoff = '4 to 8'
-df.CvC.O.pH4to8$horizon = 'O'
-df.CvC.O.pH4to8$DNA.type = 'gDNA'
-df.CvC.O.pH4to8$Controlling.for = 'pH'
-
-colnames(df.CvC.O.pH4to8) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
-                              'DNA.type', 'Controlling.for')
-
-### pH 5 to 9, control burns, O horizon -----
-ps.corncob.CvC.O.pH5to9 <-  prune_samples(sample_data(ps.CvC)$horizon == 'O' & 
+### pH 5 to 9, control burns, O horizon
+ps.corncob.CvC.O.pH5to9 <-  prune_samples(sample_data(ps.CvC)$horizon == 'O' &
                                             sample_data(ps.CvC)$pH.5to9 == 'y', ps.CvC)
 
 ps.corncob.CvC.O.pH5to9 <- prune_taxa(taxa_sums(ps.corncob.CvC.O.pH5to9)>0, ps.corncob.CvC.O.pH5to9)
 ps.corncob.CvC.O.pH5to9
-
 
 # Run corncob
 dt.CvC.O.pH5to9 <- differentialTest(formula = ~incub.trtmt+pH,
@@ -923,46 +399,14 @@ dt.CvC.O.pH5to9 <- differentialTest(formula = ~incub.trtmt+pH,
                                     data=ps.corncob.CvC.O.pH5to9,
                                     fdr_cutoff = 0.05)
 
-df.CvC.O.pH5to9 = data.frame()
 
-# Loop to pull out coefficients for each taxon
-for (j in 1:length(dt.CvC.O.pH5to9$significant_taxa)){
-  # Get the significant model for that taxon
-  sig_models = dt.CvC.O.pH5to9$significant_models[[j]]
-  # Pull out the coefficients as above
-  # NOTE: you have to make sure the row reference is correct, as determined above
-  # Here we have it as 7.
-  mu_control = data.frame(t(as.matrix(sig_models$coefficients[2,])))
-  # Also grab the p_fdr estimate for that taxon's model
-  p_fdr = dt.CvC.O.pH5to9$p_fdr[dt.CvC.O.pH5to9$significant_taxa][j]
-  # Add that estimate onto our coefficient data frame
-  mu_control$p_fdr = p_fdr
-  # Create a column with the OTU ID
-  mu_control$OTU= paste(row.names(data.frame(p_fdr)))
-  # Add this row onto the df dataframe, which will collect the results
-  # for all taxa as it iterates through this loop.
-  df.CvC.O.pH5to9 = rbind(df.CvC.O.pH5to9,mu_control)
-}
 
-df.CvC.O.pH5to9$Comparison = 'pb.control.v.SI.control'
-df.CvC.O.pH5to9$Experiment = 'fast growth'
-df.CvC.O.pH5to9$Temp.Cutoff = 'null'
-df.CvC.O.pH5to9$pH.cutoff = '5 to 9'
-df.CvC.O.pH5to9$horizon = 'O'
-df.CvC.O.pH5to9$DNA.type = 'gDNA'
-df.CvC.O.pH5to9$Controlling.for = 'pH'
-
-colnames(df.CvC.O.pH5to9) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
-                              'DNA.type', 'Controlling.for')
-
-### pH 3 to 7, control burns, A horizon -----
-ps.corncob.CvC.A.pH3to7 <-  prune_samples(sample_data(ps.CvC)$horizon == 'A' & 
+### pH 3 to 7, control burns, A horizon
+ps.corncob.CvC.A.pH3to7 <-  prune_samples(sample_data(ps.CvC)$horizon == 'A' &
                                             sample_data(ps.CvC)$pH.3to7 == 'y', ps.CvC)
 
 ps.corncob.CvC.A.pH3to7 <- prune_taxa(taxa_sums(ps.corncob.CvC.A.pH3to7)>0, ps.corncob.CvC.A.pH3to7)
 ps.corncob.CvC.A.pH3to7
-
 
 # Run corncob
 dt.CvC.A.pH3to7 <- differentialTest(formula = ~incub.trtmt+pH,
@@ -973,42 +417,10 @@ dt.CvC.A.pH3to7 <- differentialTest(formula = ~incub.trtmt+pH,
                                     data=ps.corncob.CvC.A.pH3to7,
                                     fdr_cutoff = 0.05)
 
-df.CvC.A.pH3to7 = data.frame()
 
-# Loop to pull out coefficients for each taxon
-for (j in 1:length(dt.CvC.A.pH3to7$significant_taxa)){
-  # Get the significant model for that taxon
-  sig_models = dt.CvC.A.pH3to7$significant_models[[j]]
-  # Pull out the coefficients as above
-  # NATE: you have to make sure the row reference is correct, as determined above
-  # Here we have it as 7.
-  mu_control = data.frame(t(as.matrix(sig_models$coefficients[2,])))
-  # Also grab the p_fdr estimate for that taxon's model
-  p_fdr = dt.CvC.A.pH3to7$p_fdr[dt.CvC.A.pH3to7$significant_taxa][j]
-  # Add that estimate onto our coefficient data frame
-  mu_control$p_fdr = p_fdr
-  # Create a column with the ATU ID
-  mu_control$ATU= paste(row.names(data.frame(p_fdr)))
-  # Add this row onto the df dataframe, which will collect the results
-  # for all taxa as it iterates through this loop.
-  df.CvC.A.pH3to7 = rbind(df.CvC.A.pH3to7,mu_control)
-}
 
-df.CvC.A.pH3to7$Comparison = 'pb.control.v.SI.control'
-df.CvC.A.pH3to7$Experiment = 'fast growth'
-df.CvC.A.pH3to7$Temp.Cutoff = 'null'
-df.CvC.A.pH3to7$pH.cutoff = '3 to 7'
-df.CvC.A.pH3to7$horizon = 'A'
-df.CvC.A.pH3to7$DNA.type = 'gDNA'
-df.CvC.A.pH3to7$Controlling.for = 'pH'
-
-colnames(df.CvC.A.pH3to7) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
-                              'DNA.type', 'Controlling.for')
-
-### pH 4 to 8, control burns, A horizon -----
-
-ps.corncob.CvC.A.pH4to8 <-  prune_samples(sample_data(ps.CvC)$horizon == 'A' & 
+### pH 4 to 8, control burns, A horizon
+ps.corncob.CvC.A.pH4to8 <-  prune_samples(sample_data(ps.CvC)$horizon == 'A' &
                                             sample_data(ps.CvC)$pH.4to8 == 'y', ps.CvC)
 
 ps.corncob.CvC.A.pH4to8 <- prune_taxa(taxa_sums(ps.corncob.CvC.A.pH4to8)>0, ps.corncob.CvC.A.pH4to8)
@@ -1023,46 +435,14 @@ dt.CvC.A.pH4to8 <- differentialTest(formula = ~incub.trtmt+pH,
                                     data=ps.corncob.CvC.A.pH4to8,
                                     fdr_cutoff = 0.05)
 
-df.CvC.A.pH4to8 = data.frame()
 
-# Loop to pull out coefficients for each taxon
-for (j in 1:length(dt.CvC.A.pH4to8$significant_taxa)){
-  # Get the significant model for that taxon
-  sig_models = dt.CvC.A.pH4to8$significant_models[[j]]
-  # Pull out the coefficients as above
-  # NATE: you have to make sure the row reference is correct, as determined above
-  # Here we have it as 7.
-  mu_control = data.frame(t(as.matrix(sig_models$coefficients[2,])))
-  # Also grab the p_fdr estimate for that taxon's model
-  p_fdr = dt.CvC.A.pH4to8$p_fdr[dt.CvC.A.pH4to8$significant_taxa][j]
-  # Add that estimate onto our coefficient data frame
-  mu_control$p_fdr = p_fdr
-  # Create a column with the ATU ID
-  mu_control$ATU= paste(row.names(data.frame(p_fdr)))
-  # Add this row onto the df dataframe, which will collect the results
-  # for all taxa as it iterates through this loop.
-  df.CvC.A.pH4to8 = rbind(df.CvC.A.pH4to8,mu_control)
-}
 
-df.CvC.A.pH4to8$Comparison = 'pb.control.v.SI.control'
-df.CvC.A.pH4to8$Experiment = 'fast growth'
-df.CvC.A.pH4to8$Temp.Cutoff = 'null'
-df.CvC.A.pH4to8$pH.cutoff = '4 to 8'
-df.CvC.A.pH4to8$horizon = 'A'
-df.CvC.A.pH4to8$DNA.type = 'gDNA'
-df.CvC.A.pH4to8$Controlling.for = 'pH'
-
-colnames(df.CvC.A.pH4to8) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
-                              'DNA.type', 'Controlling.for')
-
-### pH 5 to 9, control burns, A horizon -----
-ps.corncob.CvC.A.pH5to9 <-  prune_samples(sample_data(ps.CvC)$horizon == 'A' & 
+### pH 5 to 9, control burns, A horizon
+ps.corncob.CvC.A.pH5to9 <-  prune_samples(sample_data(ps.CvC)$horizon == 'A' &
                                             sample_data(ps.CvC)$pH.5to9 == 'y', ps.CvC)
 
 ps.corncob.CvC.A.pH5to9 <- prune_taxa(taxa_sums(ps.corncob.CvC.A.pH5to9)>0, ps.corncob.CvC.A.pH5to9)
 ps.corncob.CvC.A.pH5to9
-
 
 # Run corncob
 dt.CvC.A.pH5to9 <- differentialTest(formula = ~incub.trtmt+pH,
@@ -1073,89 +453,736 @@ dt.CvC.A.pH5to9 <- differentialTest(formula = ~incub.trtmt+pH,
                                     data=ps.corncob.CvC.A.pH5to9,
                                     fdr_cutoff = 0.05)
 
-df.CvC.A.pH5to9 = data.frame()
 
-# Loop to pull out coefficients for each taxon
-for (j in 1:length(dt.CvC.A.pH5to9$significant_taxa)){
-  # Get the significant model for that taxon
-  sig_models = dt.CvC.A.pH5to9$significant_models[[j]]
-  # Pull out the coefficients as above
-  # NATE: you have to make sure the row reference is correct, as determined above
-  # Here we have it as 7.
-  mu_control = data.frame(t(as.matrix(sig_models$coefficients[2,])))
+
+
+### Step 5. Clean up corncob output -----
+
+# PULL OUT COEFS FOR DRY BURNS, O HORIZON:
+
+# pH 3 to 7
+
+# Create empty dataframes to fill
+m = data.frame('intercept'=0, 'mu.incub.trtmt'=0, 'mu.pH'=0, 'OTU'='taxa','p_fdr'=0,
+               'comparison'='compare','experiment'='experiment','T.cutoff'='cutoff',
+               'pH.cutoff'=0,'horizon'='horizon','DNA.type'='type','Controlling.for'='text')
+
+dT <- dt.DvD.O.pH3to7
+for (i in 1:length(dT$significant_taxa)) {
+  m[i, 1:3] = dT$significant_models[[i]]$coefficients[1:3] #Pull out the coefficients for each OTU
+  m[i, 4] = dT$significant_taxa[[i]] # pull out coefficients for each taxon
   # Also grab the p_fdr estimate for that taxon's model
-  p_fdr = dt.CvC.A.pH5to9$p_fdr[dt.CvC.A.pH5to9$significant_taxa][j]
-  # Add that estimate onto our coefficient data frame
-  mu_control$p_fdr = p_fdr
-  # Create a column with the ATU ID
-  mu_control$ATU= paste(row.names(data.frame(p_fdr)))
-  # Add this row onto the df dataframe, which will collect the results
-  # for all taxa as it iterates through this loop.
-  df.CvC.A.pH5to9 = rbind(df.CvC.A.pH5to9,mu_control)
+  m[i,5] = dT$p_fdr[dT$significant_taxa][i]
+  m[i,6] = 'pb.dry.vs.SI.dry'
+  m[i,7] = 'fast growth'
+  m[i,8] = 'null'
+  m[i,9] = '3 to 7'
+  m[i,10] = 'O'
+  m[i,11] = 'gDNA'
+  m[i,12] = 'pH'
+}
+m.concat = m
+
+# pH 4 TO 8
+m = data.frame('intercept'=0, 'mu.incub.trtmt'=0, 'mu.pH'=0, 'OTU'='taxa','p_fdr'=0,
+               'comparison'='compare','experiment'='experiment','T.cutoff'='cutoff',
+               'pH.cutoff'=0,'horizon'='horizon','DNA.type'='type','Controlling.for'='text')
+
+dT <- dt.DvD.O.pH4to8
+for (i in 1:length(dT$significant_taxa)) {
+  m[i, 1:3] = dT$significant_models[[i]]$coefficients[1:3] #Pull out the coefficients for each OTU
+  m[i, 4] = dT$significant_taxa[[i]] # pull out coefficients for each taxon
+  # Also grab the p_fdr estimate for that taxon's model
+  m[i,5] = dT$p_fdr[dT$significant_taxa][i]
+  m[i,6] = 'pb.dry.vs.SI.dry'
+  m[i,7] = 'fast growth'
+  m[i,8] = 'null'
+  m[i,9] = '4 to 8'
+  m[i,10] = 'O'
+  m[i,11] = 'gDNA'
+  m[i,12] = 'pH'
 }
 
-df.CvC.A.pH5to9$Comparison = 'pb.control.v.SI.control'
-df.CvC.A.pH5to9$Experiment = 'fast growth'
-df.CvC.A.pH5to9$Temp.Cutoff = 'null'
-df.CvC.A.pH5to9$pH.cutoff = '5 to 9'
-df.CvC.A.pH5to9$horizon = 'A'
-df.CvC.A.pH5to9$DNA.type = 'gDNA'
-df.CvC.A.pH5to9$Controlling.for = 'pH'
-
-colnames(df.CvC.A.pH5to9) = c("Estimate","SE","t","p","p_fdr","OTU", 'Comparison', 
-                              'Experiment', 'Temp.cutoff','pH.cutoff','horizon', 
-                              'DNA.type', 'Controlling.for')
-
-
-### Combine pH category output -----
-ps.corncob.CvC.O.pH3to7
-ps.corncob.CvC.O.pH4to8
-ps.corncob.CvC.O.pH5to9
-ps.corncob.CvC.A.pH3to7
-ps.corncob.CvC.A.pH4to8
-ps.corncob.CvC.A.pH5to9
-
-length(dt.CvC.O.pH3to7$significant_taxa)
-length(dt.CvC.O.pH4to8$significant_taxa)
-length(dt.CvC.O.pH5to9$significant_taxa)
-length(dt.CvC.A.pH3to7$significant_taxa)
-length(dt.CvC.A.pH4to8$significant_taxa)
-length(dt.CvC.A.pH5to9$significant_taxa)
+m.concat = rbind(m.concat, m)
 
 
 
-df.CvC.pH.groups <- rbind(df.CvC.O.pH3to7,
-                          df.CvC.O.pH4to8,
-                          df.CvC.O.pH5to9,
-                          df.CvC.A.pH3to7,
-                          df.CvC.A.pH4to8,
-                          df.CvC.A.pH5to9)
+# pH 5 to 9
+m = data.frame('intercept'=0, 'mu.incub.trtmt'=0, 'mu.pH'=0, 'OTU'='taxa','p_fdr'=0,
+               'comparison'='compare','experiment'='experiment','T.cutoff'='cutoff',
+               'pH.cutoff'=0,'horizon'='horizon','DNA.type'='type','Controlling.for'='text')
+
+dT <- dt.DvD.O.pH5to9
+for (i in 1:length(dT$significant_taxa)) {
+  m[i, 1:3] = dT$significant_models[[i]]$coefficients[1:3] #Pull out the coefficients for each OTU
+  m[i, 4] = dT$significant_taxa[[i]] # pull out coefficients for each taxon
+  # Also grab the p_fdr estimate for that taxon's model
+  m[i,5] = dT$p_fdr[dT$significant_taxa][i]
+  m[i,6] = 'pb.dry.vs.SI.dry'
+  m[i,7] = 'fast growth'
+  m[i,8] = 'null'
+  m[i,9] = '5 to 9'
+  m[i,10] = 'O'
+  m[i,11] = 'gDNA'
+  m[i,12] = 'pH'
+}
+
+m.concat = rbind(m.concat, m)
+
+
+# REPEAT FOR A HORIZON
+# pH 3 to 7
+m = data.frame('intercept'=0, 'mu.incub.trtmt'=0, 'mu.pH'=0, 'OTU'='taxa','p_fdr'=0,
+               'comparison'='compare','experiment'='experiment','T.cutoff'='cutoff',
+               'pH.cutoff'=0,'horizon'='horizon','DNA.type'='type','Controlling.for'='text')
+
+dT <- dt.DvD.A.pH3to7
+for (i in 1:length(dT$significant_taxa)) {
+  m[i, 1:3] = dT$significant_models[[i]]$coefficients[1:3] #Pull out the coefficients for each OTU
+  m[i, 4] = dT$significant_taxa[[i]] # pull out coefficients for each taxon
+  # Also grab the p_fdr estimate for that taxon's model
+  m[i,5] = dT$p_fdr[dT$significant_taxa][i]
+  m[i,6] = 'pb.dry.vs.SI.dry'
+  m[i,7] = 'fast growth'
+  m[i,8] = 'null'
+  m[i,9] = '3 to 7'
+  m[i,10] = 'A'
+  m[i,11] = 'gDNA'
+  m[i,12] = 'pH'
+}
+
+m.concat = rbind(m.concat, m)
+
+
+
+# pH 4 to 8
+m = data.frame('intercept'=0, 'mu.incub.trtmt'=0, 'mu.pH'=0, 'OTU'='taxa','p_fdr'=0,
+               'comparison'='compare','experiment'='experiment','T.cutoff'='cutoff',
+               'pH.cutoff'=0,'horizon'='horizon','DNA.type'='type','Controlling.for'='text')
+
+dT <- dt.DvD.A.pH4to8
+for (i in 1:length(dT$significant_taxa)) {
+  m[i, 1:3] = dT$significant_models[[i]]$coefficients[1:3] #Pull out the coefficients for each OTU
+  m[i, 4] = dT$significant_taxa[[i]] # pull out coefficients for each taxon
+  # Also grab the p_fdr estimate for that taxon's model
+  m[i,5] = dT$p_fdr[dT$significant_taxa][i]
+  m[i,6] = 'pb.dry.vs.SI.dry'
+  m[i,7] = 'fast growth'
+  m[i,8] = 'null'
+  m[i,9] = '4 to 8'
+  m[i,10] = 'A'
+  m[i,11] = 'gDNA'
+  m[i,12] = 'pH'
+}
+
+m.concat = rbind(m.concat, m)
+
+
+
+# pH 5 to 9
+m = data.frame('intercept'=0, 'mu.incub.trtmt'=0, 'mu.pH'=0, 'OTU'='taxa','p_fdr'=0,
+               'comparison'='compare','experiment'='experiment','T.cutoff'='cutoff',
+               'pH.cutoff'=0,'horizon'='horizon','DNA.type'='type','Controlling.for'='text')
+
+dT <- dt.DvD.A.pH5to9
+for (i in 1:length(dT$significant_taxa)) {
+  m[i, 1:3] = dT$significant_models[[i]]$coefficients[1:3] #Pull out the coefficients for each OTU
+  m[i, 4] = dT$significant_taxa[[i]] # pull out coefficients for each taxon
+  # Also grab the p_fdr estimate for that taxon's model
+  m[i,5] = dT$p_fdr[dT$significant_taxa][i]
+  m[i,6] = 'pb.dry.vs.SI.dry'
+  m[i,7] = 'fast growth'
+  m[i,8] = 'null'
+  m[i,9] = '5 to 9'
+  m[i,10] = 'A'
+  m[i,11] = 'gDNA'
+  m[i,12] = 'pH'
+}
+
+m.concat = rbind(m.concat, m)
+
+
+
+
+# PULL OUT COEFS FOR WET BURNS, O HORIZON:
+
+# pH 3 to 7
+
+# Create empty dataframes to fill
+m = data.frame('intercept'=0, 'mu.incub.trtmt'=0, 'mu.pH'=0, 'OTU'='taxa','p_fdr'=0,
+               'comparison'='compare','experiment'='experiment','T.cutoff'='cutoff',
+               'pH.cutoff'=0,'horizon'='horizon','DNA.type'='type','Controlling.for'='text')
+
+dT <- dt.WvW.O.pH3to7
+for (i in 1:length(dT$significant_taxa)) {
+  m[i, 1:3] = dT$significant_models[[i]]$coefficients[1:3] #Pull out the coefficients for each OTU
+  m[i, 4] = dT$significant_taxa[[i]] # pull out coefficients for each taxon
+  # Also grab the p_fdr estimate for that taxon's model
+  m[i,5] = dT$p_fdr[dT$significant_taxa][i]
+  m[i,6] = 'pb.wet.vs.SI.wet'
+  m[i,7] = 'fast growth'
+  m[i,8] = 'null'
+  m[i,9] = '3 to 7'
+  m[i,10] = 'O'
+  m[i,11] = 'gDNA'
+  m[i,12] = 'pH'
+}
+m.concat = rbind(m.concat, m)
+
+
+# pH 4 TO 8
+m = data.frame('intercept'=0, 'mu.incub.trtmt'=0, 'mu.pH'=0, 'OTU'='taxa','p_fdr'=0,
+               'comparison'='compare','experiment'='experiment','T.cutoff'='cutoff',
+               'pH.cutoff'=0,'horizon'='horizon','DNA.type'='type','Controlling.for'='text')
+
+dT <- dt.WvW.O.pH4to8
+for (i in 1:length(dT$significant_taxa)) {
+  m[i, 1:3] = dT$significant_models[[i]]$coefficients[1:3] #Pull out the coefficients for each OTU
+  m[i, 4] = dT$significant_taxa[[i]] # pull out coefficients for each taxon
+  # Also grab the p_fdr estimate for that taxon's model
+  m[i,5] = dT$p_fdr[dT$significant_taxa][i]
+  m[i,6] = 'pb.wet.vs.SI.wet'
+  m[i,7] = 'fast growth'
+  m[i,8] = 'null'
+  m[i,9] = '4 to 8'
+  m[i,10] = 'O'
+  m[i,11] = 'gDNA'
+  m[i,12] = 'pH'
+}
+
+m.concat = rbind(m.concat, m)
+
+
+
+# pH 5 to 9
+m = data.frame('intercept'=0, 'mu.incub.trtmt'=0, 'mu.pH'=0, 'OTU'='taxa','p_fdr'=0,
+               'comparison'='compare','experiment'='experiment','T.cutoff'='cutoff',
+               'pH.cutoff'=0,'horizon'='horizon','DNA.type'='type','Controlling.for'='text')
+
+dT <- dt.WvW.O.pH5to9
+for (i in 1:length(dT$significant_taxa)) {
+  m[i, 1:3] = dT$significant_models[[i]]$coefficients[1:3] #Pull out the coefficients for each OTU
+  m[i, 4] = dT$significant_taxa[[i]] # pull out coefficients for each taxon
+  # Also grab the p_fdr estimate for that taxon's model
+  m[i,5] = dT$p_fdr[dT$significant_taxa][i]
+  m[i,6] = 'pb.wet.vs.SI.wet'
+  m[i,7] = 'fast growth'
+  m[i,8] = 'null'
+  m[i,9] = '5 to 9'
+  m[i,10] = 'O'
+  m[i,11] = 'gDNA'
+  m[i,12] = 'pH'
+}
+
+m.concat = rbind(m.concat, m)
+
+
+# REPEAT FOR A HORIZON
+# pH 3 to 7
+m = data.frame('intercept'=0, 'mu.incub.trtmt'=0, 'mu.pH'=0, 'OTU'='taxa','p_fdr'=0,
+               'comparison'='compare','experiment'='experiment','T.cutoff'='cutoff',
+               'pH.cutoff'=0,'horizon'='horizon','DNA.type'='type','Controlling.for'='text')
+
+dT <- dt.WvW.A.pH3to7
+for (i in 1:length(dT$significant_taxa)) {
+  m[i, 1:3] = dT$significant_models[[i]]$coefficients[1:3] #Pull out the coefficients for each OTU
+  m[i, 4] = dT$significant_taxa[[i]] # pull out coefficients for each taxon
+  # Also grab the p_fdr estimate for that taxon's model
+  m[i,5] = dT$p_fdr[dT$significant_taxa][i]
+  m[i,6] = 'pb.wet.vs.SI.wet'
+  m[i,7] = 'fast growth'
+  m[i,8] = 'null'
+  m[i,9] = '3 to 7'
+  m[i,10] = 'A'
+  m[i,11] = 'gDNA'
+  m[i,12] = 'pH'
+}
+
+m.concat = rbind(m.concat, m)
+
+
+
+# pH 4 to 8
+m = data.frame('intercept'=0, 'mu.incub.trtmt'=0, 'mu.pH'=0, 'OTU'='taxa','p_fdr'=0,
+               'comparison'='compare','experiment'='experiment','T.cutoff'='cutoff',
+               'pH.cutoff'=0,'horizon'='horizon','DNA.type'='type','Controlling.for'='text')
+
+dT <- dt.WvW.A.pH4to8
+for (i in 1:length(dT$significant_taxa)) {
+  m[i, 1:3] = dT$significant_models[[i]]$coefficients[1:3] #Pull out the coefficients for each OTU
+  m[i, 4] = dT$significant_taxa[[i]] # pull out coefficients for each taxon
+  # Also grab the p_fdr estimate for that taxon's model
+  m[i,5] = dT$p_fdr[dT$significant_taxa][i]
+  m[i,6] = 'pb.wet.vs.SI.wet'
+  m[i,7] = 'fast growth'
+  m[i,8] = 'null'
+  m[i,9] = '4 to 8'
+  m[i,10] = 'A'
+  m[i,11] = 'gDNA'
+  m[i,12] = 'pH'
+}
+
+m.concat = rbind(m.concat, m)
+
+
+
+# pH 5 to 9
+m = data.frame('intercept'=0, 'mu.incub.trtmt'=0, 'mu.pH'=0, 'OTU'='taxa','p_fdr'=0,
+               'comparison'='compare','experiment'='experiment','T.cutoff'='cutoff',
+               'pH.cutoff'=0,'horizon'='horizon','DNA.type'='type','Controlling.for'='text')
+
+dT <- dt.WvW.A.pH5to9
+for (i in 1:length(dT$significant_taxa)) {
+  m[i, 1:3] = dT$significant_models[[i]]$coefficients[1:3] #Pull out the coefficients for each OTU
+  m[i, 4] = dT$significant_taxa[[i]] # pull out coefficients for each taxon
+  # Also grab the p_fdr estimate for that taxon's model
+  m[i,5] = dT$p_fdr[dT$significant_taxa][i]
+  m[i,6] = 'pb.wet.vs.SI.wet'
+  m[i,7] = 'fast growth'
+  m[i,8] = 'null'
+  m[i,9] = '5 to 9'
+  m[i,10] = 'A'
+  m[i,11] = 'gDNA'
+  m[i,12] = 'pH'
+}
+
+m.concat = rbind(m.concat, m)
+
+
+
+# PULL OUT COEFS FOR CNTL BURNS, O HORIZON:
+
+# pH 3 to 7
+
+# Create empty dataframes to fill
+m = data.frame('intercept'=0, 'mu.incub.trtmt'=0, 'mu.pH'=0, 'OTU'='taxa','p_fdr'=0,
+               'comparison'='compare','experiment'='experiment','T.cutoff'='cutoff',
+               'pH.cutoff'=0,'horizon'='horizon','DNA.type'='type','Controlling.for'='text')
+
+dT <- dt.CvC.O.pH3to7
+for (i in 1:length(dT$significant_taxa)) {
+  m[i, 1:3] = dT$significant_models[[i]]$coefficients[1:3] #Pull out the coefficients for each OTU
+  m[i, 4] = dT$significant_taxa[[i]] # pull out coefficients for each taxon
+  # Also grab the p_fdr estimate for that taxon's model
+  m[i,5] = dT$p_fdr[dT$significant_taxa][i]
+  m[i,6] = 'pb.cntl.vs.SI.cntl'
+  m[i,7] = 'fast growth'
+  m[i,8] = 'null'
+  m[i,9] = '3 to 7'
+  m[i,10] = 'O'
+  m[i,11] = 'gDNA'
+  m[i,12] = 'pH'
+}
+m.concat = rbind(m.concat, m)
+
+
+
+# pH 4 TO 8
+m = data.frame('intercept'=0, 'mu.incub.trtmt'=0, 'mu.pH'=0, 'OTU'='taxa','p_fdr'=0,
+               'comparison'='compare','experiment'='experiment','T.cutoff'='cutoff',
+               'pH.cutoff'=0,'horizon'='horizon','DNA.type'='type','Controlling.for'='text')
+
+dT <- dt.CvC.O.pH4to8
+for (i in 1:length(dT$significant_taxa)) {
+  m[i, 1:3] = dT$significant_models[[i]]$coefficients[1:3] #Pull out the coefficients for each OTU
+  m[i, 4] = dT$significant_taxa[[i]] # pull out coefficients for each taxon
+  # Also grab the p_fdr estimate for that taxon's model
+  m[i,5] = dT$p_fdr[dT$significant_taxa][i]
+  m[i,6] = 'pb.cntl.vs.SI.cntl'
+  m[i,7] = 'fast growth'
+  m[i,8] = 'null'
+  m[i,9] = '4 to 8'
+  m[i,10] = 'O'
+  m[i,11] = 'gDNA'
+  m[i,12] = 'pH'
+}
+
+m.concat = rbind(m.concat, m)
+
+
+
+# pH 5 to 9
+m = data.frame('intercept'=0, 'mu.incub.trtmt'=0, 'mu.pH'=0, 'OTU'='taxa','p_fdr'=0,
+               'comparison'='compare','experiment'='experiment','T.cutoff'='cutoff',
+               'pH.cutoff'=0,'horizon'='horizon','DNA.type'='type','Controlling.for'='text')
+
+dT <- dt.CvC.O.pH5to9
+for (i in 1:length(dT$significant_taxa)) {
+  m[i, 1:3] = dT$significant_models[[i]]$coefficients[1:3] #Pull out the coefficients for each OTU
+  m[i, 4] = dT$significant_taxa[[i]] # pull out coefficients for each taxon
+  # Also grab the p_fdr estimate for that taxon's model
+  m[i,5] = dT$p_fdr[dT$significant_taxa][i]
+  m[i,6] = 'pb.cntl.vs.SI.cntl'
+  m[i,7] = 'fast growth'
+  m[i,8] = 'null'
+  m[i,9] = '5 to 9'
+  m[i,10] = 'O'
+  m[i,11] = 'gDNA'
+  m[i,12] = 'pH'
+}
+
+m.concat = rbind(m.concat, m)
+
+
+# REPEAT FOR A HORIZON
+# pH 3 to 7
+m = data.frame('intercept'=0, 'mu.incub.trtmt'=0, 'mu.pH'=0, 'OTU'='taxa','p_fdr'=0,
+               'comparison'='compare','experiment'='experiment','T.cutoff'='cutoff',
+               'pH.cutoff'=0,'horizon'='horizon','DNA.type'='type','Controlling.for'='text')
+
+dT <- dt.CvC.A.pH3to7
+for (i in 1:length(dT$significant_taxa)) {
+  m[i, 1:3] = dT$significant_models[[i]]$coefficients[1:3] #Pull out the coefficients for each OTU
+  m[i, 4] = dT$significant_taxa[[i]] # pull out coefficients for each taxon
+  # Also grab the p_fdr estimate for that taxon's model
+  m[i,5] = dT$p_fdr[dT$significant_taxa][i]
+  m[i,6] = 'pb.cntl.vs.SI.cntl'
+  m[i,7] = 'fast growth'
+  m[i,8] = 'null'
+  m[i,9] = '3 to 7'
+  m[i,10] = 'A'
+  m[i,11] = 'gDNA'
+  m[i,12] = 'pH'
+}
+
+m.concat = rbind(m.concat, m)
+
+
+
+# pH 4 to 8
+m = data.frame('intercept'=0, 'mu.incub.trtmt'=0, 'mu.pH'=0, 'OTU'='taxa','p_fdr'=0,
+               'comparison'='compare','experiment'='experiment','T.cutoff'='cutoff',
+               'pH.cutoff'=0,'horizon'='horizon','DNA.type'='type','Controlling.for'='text')
+
+dT <- dt.CvC.A.pH4to8
+for (i in 1:length(dT$significant_taxa)) {
+  m[i, 1:3] = dT$significant_models[[i]]$coefficients[1:3] #Pull out the coefficients for each OTU
+  m[i, 4] = dT$significant_taxa[[i]] # pull out coefficients for each taxon
+  # Also grab the p_fdr estimate for that taxon's model
+  m[i,5] = dT$p_fdr[dT$significant_taxa][i]
+  m[i,6] = 'pb.cntl.vs.SI.cntl'
+  m[i,7] = 'fast growth'
+  m[i,8] = 'null'
+  m[i,9] = '4 to 8'
+  m[i,10] = 'A'
+  m[i,11] = 'gDNA'
+  m[i,12] = 'pH'
+}
+
+m.concat = rbind(m.concat, m)
+
+
+
+# pH 5 to 9
+m = data.frame('intercept'=0, 'mu.incub.trtmt'=0, 'mu.pH'=0, 'OTU'='taxa','p_fdr'=0,
+               'comparison'='compare','experiment'='experiment','T.cutoff'='cutoff',
+               'pH.cutoff'=0,'horizon'='horizon','DNA.type'='type','Controlling.for'='text')
+
+dT <- dt.CvC.A.pH5to9
+for (i in 1:length(dT$significant_taxa)) {
+  m[i, 1:3] = dT$significant_models[[i]]$coefficients[1:3] #Pull out the coefficients for each OTU
+  m[i, 4] = dT$significant_taxa[[i]] # pull out coefficients for each taxon
+  # Also grab the p_fdr estimate for that taxon's model
+  m[i,5] = dT$p_fdr[dT$significant_taxa][i]
+  m[i,6] = 'pb.cntl.vs.SI.cntl'
+  m[i,7] = 'fast growth'
+  m[i,8] = 'null'
+  m[i,9] = '5 to 9'
+  m[i,10] = 'A'
+  m[i,11] = 'gDNA'
+  m[i,12] = 'pH'
+}
+
+m.concat = rbind(m.concat, m)
+
+
+
+
+### Alternative step 4: Don't separate by burn.trtmt; run corncob ----
+#
+# ### pH 3 to 7, O horizon
+# ps.corncob.O.pH3to7 <-  prune_samples(sample_data(ps.raw.prune)$horizon == 'O' & 
+#                                             sample_data(ps.raw.prune)$pH.3to7 == 'y', ps.raw.prune)
+# 
+# ps.corncob.O.pH3to7 <- prune_taxa(taxa_sums(ps.corncob.O.pH3to7)>0, ps.corncob.O.pH3to7)
+# ps.corncob.O.pH3to7
+# 
+# # Run corncob
+# dt.O.pH3to7 <- differentialTest(formula = ~incub.trtmt+pH,
+#                                     phi.formula = ~ incub.trtmt+pH,
+#                                     formula_null = ~ pH,
+#                                     phi.formula_null = ~incub.trtmt+ pH,
+#                                     test = 'Wald',boot=FALSE,
+#                                     data=ps.corncob.O.pH3to7,
+#                                     fdr_cutoff = 0.05)
+# rm(ps.corncob.O.pH3to7)
+# 
+# 
+# ### pH 4 to 8, O horizon
+# ps.corncob.O.pH4to8 <-  prune_samples(sample_data(ps.raw.prune)$horizon == 'O' & 
+#                                             sample_data(ps.raw.prune)$pH.4to8 == 'y', ps.raw.prune)
+# 
+# ps.corncob.O.pH4to8 <- prune_taxa(taxa_sums(ps.corncob.O.pH4to8)>0, ps.corncob.O.pH4to8)
+# ps.corncob.O.pH4to8
+# 
+# # Run corncob
+# dt.O.pH4to8 <- differentialTest(formula = ~incub.trtmt+pH,
+#                                     phi.formula = ~ incub.trtmt+pH,
+#                                     formula_null = ~ pH,
+#                                     phi.formula_null = ~incub.trtmt+ pH,
+#                                     test = 'Wald',boot=FALSE,
+#                                     data=ps.corncob.O.pH4to8,
+#                                     fdr_cutoff = 0.05)
+# rm(ps.corncob.O.pH4to8)
+# 
+# 
+# 
+# ### pH 5 to 9, Dry burns, O horizon
+# ps.corncob.O.pH5to9 <-  prune_samples(sample_data(ps.raw.prune)$horizon == 'O' & 
+#                                             sample_data(ps.raw.prune)$pH.5to9 == 'y', ps.raw.prune)
+# 
+# ps.corncob.O.pH5to9 <- prune_taxa(taxa_sums(ps.corncob.O.pH5to9)>0, ps.corncob.O.pH5to9)
+# sample_names(ps.corncob.O.pH5to9)
+# ps.corncob.O.pH5to9
+# 
+# 
+# # Run corncob
+# dt.O.pH5to9 <- differentialTest(formula = ~incub.trtmt+pH,
+#                                     phi.formula = ~ incub.trtmt+pH,
+#                                     formula_null = ~ pH,
+#                                     phi.formula_null = ~incub.trtmt+ pH,
+#                                     test = 'Wald',boot=FALSE,
+#                                     data=ps.corncob.O.pH5to9,
+#                                     fdr_cutoff = 0.05)
+# rm(ps.corncob.O.pH5to9)
+# 
+# 
+# 
+# ### pH 3 to 7, DA horizon
+# ps.corncob.A.pH3to7 <-  prune_samples(sample_data(ps.raw.prune)$horizon == 'A' &
+#                                             sample_data(ps.raw.prune)$pH.3to7 == 'y', ps.raw.prune)
+# 
+# ps.corncob.A.pH3to7 <- prune_taxa(taxa_sums(ps.corncob.A.pH3to7)>0, ps.corncob.A.pH3to7)
+# ps.corncob.A.pH3to7
+# 
+# # Run corncob
+# dt.A.pH3to7 <- differentialTest(formula = ~incub.trtmt+pH,
+#                                     phi.formula = ~ incub.trtmt+pH,
+#                                     formula_null = ~ pH,
+#                                     phi.formula_null = ~incub.trtmt+ pH,
+#                                     test = 'Wald',boot=FALSE,
+#                                     data=ps.corncob.A.pH3to7,
+#                                     fdr_cutoff = 0.05)
+# rm(ps.corncob.A.pH3to7)
+# 
+# 
+# 
+# ### pH 4 to 8, A horizon
+# ps.corncob.A.pH4to8 <-  prune_samples(sample_data(ps.raw.prune)$horizon == 'A' & 
+#                                             sample_data(ps.raw.prune)$pH.4to8 == 'y', ps.raw.prune)
+# 
+# ps.corncob.A.pH4to8 <- prune_taxa(taxa_sums(ps.corncob.A.pH4to8)>0, ps.corncob.A.pH4to8)
+# ps.corncob.A.pH4to8
+# 
+# # Run corncob
+# dt.A.pH4to8 <- differentialTest(formula = ~incub.trtmt+pH,
+#                                     phi.formula = ~ incub.trtmt+pH,
+#                                     formula_null = ~ pH,
+#                                     phi.formula_null = ~incub.trtmt+ pH,
+#                                     test = 'Wald',boot=FALSE,
+#                                     data=ps.corncob.A.pH4to8,
+#                                     fdr_cutoff = 0.05)
+# rm(ps.corncob.A.pH4to8)
+# 
+# 
+# 
+# ### pH 5 to 9, A horizon
+# ps.corncob.A.pH5to9 <-  prune_samples(sample_data(ps.raw.prune)$horizon == 'A' & 
+#                                             sample_data(ps.raw.prune)$pH.5to9 == 'y', ps.raw.prune)
+# 
+# ps.corncob.A.pH5to9 <- prune_taxa(taxa_sums(ps.corncob.A.pH5to9)>0, ps.corncob.A.pH5to9)
+# ps.corncob.A.pH5to9
+# 
+# 
+# # Run corncob
+# dt.A.pH5to9 <- differentialTest(formula = ~incub.trtmt+pH,
+#                                     phi.formula = ~ incub.trtmt+pH,
+#                                     formula_null = ~ pH,
+#                                     phi.formula_null = ~incub.trtmt+ pH,
+#                                     test = 'Wald',boot=FALSE,
+#                                     data=ps.corncob.A.pH5to9,
+#                                     fdr_cutoff = 0.05)
+# rm(ps.corncob.A.pH5to9)
+
+
+
+
+
+### Alterantive Step 5. Clean up corncob output -----
+
+# PULL OUT COEFS FOR O HORIZON:
+
+# pH 3 to 7
+# Create empty dataframes to fill
+m = data.frame('intercept'=0, 'mu.incub.trtmt'=0, 'mu.pH'=0, 'OTU'='taxa','p_fdr'=0,
+               'comparison'='compare','experiment'='experiment','T.cutoff'='cutoff',
+               'pH.cutoff'=0,'horizon'='horizon','DNA.type'='type','Controlling.for'='text')
+
+dT <- dt.O.pH3to7
+for (i in 1:length(dT$significant_taxa)) {
+  m[i, 1:3] = dT$significant_models[[i]]$coefficients[1:3] #Pull out the coefficients for each OTU
+  m[i, 4] = dT$significant_taxa[[i]] # pull out coefficients for each taxon
+  # Also grab the p_fdr estimate for that taxon's model
+  m[i,5] = dT$p_fdr[dT$significant_taxa][i]
+  m[i,6] = 'pb.vs.SI'
+  m[i,7] = 'fast growth'
+  m[i,8] = 'null'
+  m[i,9] = '3 to 7'
+  m[i,10] = 'O'
+  m[i,11] = 'gDNA'
+  m[i,12] = 'pH'
+}
+m.concat = m
+
+# pH 4 TO 8
+m = data.frame('intercept'=0, 'mu.incub.trtmt'=0, 'mu.pH'=0, 'OTU'='taxa','p_fdr'=0,
+               'comparison'='compare','experiment'='experiment','T.cutoff'='cutoff',
+               'pH.cutoff'=0,'horizon'='horizon','DNA.type'='type','Controlling.for'='text')
+
+dT <- dt.O.pH4to8
+for (i in 1:length(dT$significant_taxa)) {
+  m[i, 1:3] = dT$significant_models[[i]]$coefficients[1:3] #Pull out the coefficients for each OTU
+  m[i, 4] = dT$significant_taxa[[i]] # pull out coefficients for each taxon
+  # Also grab the p_fdr estimate for that taxon's model
+  m[i,5] = dT$p_fdr[dT$significant_taxa][i]
+  m[i,6] = 'pb.vs.SI'
+  m[i,7] = 'fast growth'
+  m[i,8] = 'null'
+  m[i,9] = '4 to 8'
+  m[i,10] = 'O'
+  m[i,11] = 'gDNA'
+  m[i,12] = 'pH'
+}
+
+m.concat = rbind(m.concat, m)
+
+
+
+# pH 5 to 9
+m = data.frame('intercept'=0, 'mu.incub.trtmt'=0, 'mu.pH'=0, 'OTU'='taxa','p_fdr'=0,
+               'comparison'='compare','experiment'='experiment','T.cutoff'='cutoff',
+               'pH.cutoff'=0,'horizon'='horizon','DNA.type'='type','Controlling.for'='text')
+
+dT <- dt.O.pH5to9
+for (i in 1:length(dT$significant_taxa)) {
+  m[i, 1:3] = dT$significant_models[[i]]$coefficients[1:3] #Pull out the coefficients for each OTU
+  m[i, 4] = dT$significant_taxa[[i]] # pull out coefficients for each taxon
+  # Also grab the p_fdr estimate for that taxon's model
+  m[i,5] = dT$p_fdr[dT$significant_taxa][i]
+  m[i,6] = 'pb.vs.SI'
+  m[i,7] = 'fast growth'
+  m[i,8] = 'null'
+  m[i,9] = '5 to 9'
+  m[i,10] = 'O'
+  m[i,11] = 'gDNA'
+  m[i,12] = 'pH'
+}
+
+m.concat = rbind(m.concat, m)
+
+
+# REPEAT FOR A HORIZON
+# pH 3 to 7
+m = data.frame('intercept'=0, 'mu.incub.trtmt'=0, 'mu.pH'=0, 'OTU'='taxa','p_fdr'=0,
+               'comparison'='compare','experiment'='experiment','T.cutoff'='cutoff',
+               'pH.cutoff'=0,'horizon'='horizon','DNA.type'='type','Controlling.for'='text')
+
+dT <- dt.A.pH3to7
+for (i in 1:length(dT$significant_taxa)) {
+  m[i, 1:3] = dT$significant_models[[i]]$coefficients[1:3] #Pull out the coefficients for each OTU
+  m[i, 4] = dT$significant_taxa[[i]] # pull out coefficients for each taxon
+  # Also grab the p_fdr estimate for that taxon's model
+  m[i,5] = dT$p_fdr[dT$significant_taxa][i]
+  m[i,6] = 'pb.vs.SI'
+  m[i,7] = 'fast growth'
+  m[i,8] = 'null'
+  m[i,9] = '3 to 7'
+  m[i,10] = 'A'
+  m[i,11] = 'gDNA'
+  m[i,12] = 'pH'
+}
+
+m.concat = rbind(m.concat, m)
+
+
+
+# pH 4 to 8
+m = data.frame('intercept'=0, 'mu.incub.trtmt'=0, 'mu.pH'=0, 'OTU'='taxa','p_fdr'=0,
+               'comparison'='compare','experiment'='experiment','T.cutoff'='cutoff',
+               'pH.cutoff'=0,'horizon'='horizon','DNA.type'='type','Controlling.for'='text')
+
+dT <- dt.A.pH4to8
+for (i in 1:length(dT$significant_taxa)) {
+  m[i, 1:3] = dT$significant_models[[i]]$coefficients[1:3] #Pull out the coefficients for each OTU
+  m[i, 4] = dT$significant_taxa[[i]] # pull out coefficients for each taxon
+  # Also grab the p_fdr estimate for that taxon's model
+  m[i,5] = dT$p_fdr[dT$significant_taxa][i]
+  m[i,6] = 'pb.vs.SI'
+  m[i,7] = 'fast growth'
+  m[i,8] = 'null'
+  m[i,9] = '4 to 8'
+  m[i,10] = 'A'
+  m[i,11] = 'gDNA'
+  m[i,12] = 'pH'
+}
+
+m.concat = rbind(m.concat, m)
+
+
+
+# pH 5 to 9
+m = data.frame('intercept'=0, 'mu.incub.trtmt'=0, 'mu.pH'=0, 'OTU'='taxa','p_fdr'=0,
+               'comparison'='compare','experiment'='experiment','T.cutoff'='cutoff',
+               'pH.cutoff'=0,'horizon'='horizon','DNA.type'='type','Controlling.for'='text')
+
+dT <- dt.A.pH5to9
+for (i in 1:length(dT$significant_taxa)) {
+  m[i, 1:3] = dT$significant_models[[i]]$coefficients[1:3] #Pull out the coefficients for each OTU
+  m[i, 4] = dT$significant_taxa[[i]] # pull out coefficients for each taxon
+  # Also grab the p_fdr estimate for that taxon's model
+  m[i,5] = dT$p_fdr[dT$significant_taxa][i]
+  m[i,6] = 'pb.vs.SI'
+  m[i,7] = 'fast growth'
+  m[i,8] = 'null'
+  m[i,9] = '5 to 9'
+  m[i,10] = 'A'
+  m[i,11] = 'gDNA'
+  m[i,12] = 'pH'
+}
+
+m.concat = rbind(m.concat, m)
+
+
+### Step 6. Clean up output -----
+rm(df.joined)
 
 # Let's bring back in our taxonomy from the tax table
-SigOTUs = levels(as.factor(df.CvC.pH.groups$OTU))
+SigOTUs = levels(as.factor(m.concat$OTU))
 pruned = prune_taxa(SigOTUs,ps.norm.prune)
 taxtab = data.frame(tax_table(pruned))
 taxtab$OTU = c(taxa_names(pruned))
-df.joined.CvC.pH = merge(df.CvC.pH.groups,taxtab,by=c("OTU"))
-head(df.joined.CvC.pH)
+df.joined = merge(m.concat,taxtab,by=c("OTU"))
+head(df.joined)
 
 
-
-
-df.DvD.pH.groups
-df.WvW.pH.groups
-df.CvC.pH.groups
-
+### Step 7. Save output -----
 # Save output: 
-write.csv(df.joined.DvD.pH,"data/sequence-data/LibCombined/corncob-output/OTU level/All_taxa/Ex2 Fast growth/DvD-3-sliding-pH-categories.csv", row.names = FALSE)
-#    
 
-# Save output: 
-write.csv(df.joined.CvC.pH,"data/sequence-data/LibCombined/corncob-output/OTU level/All_taxa/Ex2 Fast growth/CvC-3-sliding-pH-categories.csv", row.names = FALSE)
-#    
+#write.csv(df.joined,"data/sequence-data/LibCombined/corncob-output/Manuscript/Ex2_signOTUs_3sliding_pH_categories_DryBurns_T_greater_than_50C.csv", row.names = FALSE)
 
-# Save output: 
-write.csv(df.joined.WvW.pH,"data/sequence-data/LibCombined/corncob-output/OTU level/All_taxa/Ex2 Fast growth/WvW-3-sliding-pH-categories.csv", row.names = FALSE)
-#  
+
+
+
+
 
 

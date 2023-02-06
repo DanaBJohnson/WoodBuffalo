@@ -27,6 +27,7 @@ library(ggtern) # for ternary plots
 
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(out.width = '100%')
+
 ```
 
 
@@ -928,13 +929,13 @@ RDP <- read.csv('../data/All-OTUs-CopyNum.csv')
 
 
 
-df.fast <- subset(df.full, Experiment == 'fast growth' &
+df.fast <- subset(df.full, experiment == 'fast growth' &
                         Estimate > (mean(Estimate)-1*sd(Estimate))) %>%
   mutate(fast.est = Estimate)%>%
   dplyr::group_by(OTU) %>%
   dplyr::mutate(max.Estimate = max(Estimate)) %>%
   subset(Estimate == max.Estimate) %>%
-  subset(select = c(OTU, Estimate, SE, t, p, p_fdr,Comparison, Experiment,
+  subset(select = c(OTU, Estimate, SE, t, p, p_fdr,Comparison, experiment,
                     horizon, Domain, Phylum, Class, Order, Family, Genus, 
                     Species, DNA.type, fast.est)) %>%
   unique()
@@ -965,7 +966,7 @@ p = ggplot(df.responders, aes(x=Responders, y = CopyNum)) +
 
 
 df.SI.responders <- df.full.OTU %>%
-  subset(Experiment == 'fast growth') %>%
+  subset(experiment == 'fast growth') %>%
   merge(RDP) 
 
 dim(df.SI.responders)
@@ -1097,23 +1098,24 @@ summary(test)
 
 # Figure 6: Trade offs
 ```{r}
-df <- read.csv('../data/sequence-data/LibCombined/corncob-output/all-responders.csv')
-df.L2FC <- read.csv('../data/sequence-data/LibCombined/corncob-output/Full_L2FC.csv')
+
+df <- read.csv('../../data/sequence-data/LibCombined/corncob-output/Manuscript/all-responders.csv')
+df.L2FC <- read.csv('../../data/sequence-data/LibCombined/corncob-output/Full_L2FC.csv')
 
 
 
 # Checking to make sure that L2FC calculations didn't drop any OTUs. 
 df.survival <- df %>%
-  subset(Experiment == 'survival'&
-           Temp.cutoff %in% c('Low thermo greater than 50 C','Mid thermo greater than 50 C') & 
-           Estimate > 0) %>%
-  subset(Estimate > (mean(Estimate)-1*sd(Estimate)) ) %>% 
+  subset(experiment == 'survival'&
+           T.cutoff %in% c('Low thermo > 50C','Mid thermo > 50C') & 
+           intercept > 0) %>%
+  subset(intercept > (mean(intercept)-1*sd(intercept)) ) %>% 
   subset(select = c(OTU,Phylum, Class, Order, Family, Genus, Species)) %>%
   unique()
 
 df.survival.L2FC <- df.L2FC %>%
-  subset(Experiment == 'survival'  &
-           Temp.cutoff %in% c('low thermo greater than 50 C','mid thermo greater than 50 C') &
+  subset(experiment == 'survival'  &
+           T.cutoff %in% c('low thermo > 50C','Mid thermo > 50C') &
            mu > 0) %>%
   subset(mu > (mean(mu)-1*sd(mu))) %>%
   subset(select = c(OTU)) %>%
@@ -1127,15 +1129,15 @@ dim(df.survival.L2FC)
 
 
 df.fast <- df %>%
-  subset(Experiment == 'fast growth'&
-           Estimate > 0) %>%
-  subset(Estimate > (mean(Estimate)-1*sd(Estimate)) ) %>% 
+  subset(experiment == 'fast growth'&
+           intercept > 0) %>%
+  subset(intercept > (mean(intercept)-1*sd(intercept)) ) %>% 
   subset(select = c(OTU,Phylum, Class, Order, Family, Genus, Species)) %>%
   unique()
 dim(df.fast)
 
 df.fast.L2FC  <- df.L2FC %>%
-  subset(Experiment == 'fast growth'  &
+  subset(experiment == 'fast growth'  &
            mu > 0) %>%
   subset(mu > (mean(mu)-1*sd(mu))) %>%
   subset(select = c(OTU)) %>%
@@ -1146,17 +1148,17 @@ df.fast.merge <- merge(df.fast.L2FC, df.fast)
 
 
 df.affinity <- df %>%
-  subset(Experiment == 'affinity'&
-           Temp.cutoff %in% c('Low thermo greater than 50 C','Mid thermo greater than 50 C') &
-           Estimate > 0) %>%
-  subset(Estimate > (mean(Estimate)-1*sd(Estimate)) ) %>% 
+  subset(experiment == 'affinity'&
+           T.cutoff %in% c('Low thermo > 50','Mid thermo > 50') &
+           intercept > 0) %>%
+  subset(intercept > (mean(intercept)-1*sd(intercept)) ) %>% 
   subset(select = c(OTU,Phylum, Class, Order, Family, Genus, Species)) %>%
   unique()
 dim(df.affinity)
 
 df.affinity.L2FC  <- df.L2FC %>%
-  subset(Experiment == 'affinity'  &
-           Temp.cutoff %in% c('low thermo greater than 50 C','mid thermo greater than 50 C') &
+  subset(experiment == 'affinity'  &
+           T.cutoff %in% c('low thermo > 50 C','mid thermo > 50 C') &
            mu > 0) %>%
   subset(mu > (mean(mu)-1*sd(mu))) %>%
   subset(select = c(OTU)) %>%
@@ -1173,9 +1175,9 @@ df.full <- df.L2FC
 df <-  subset(df.full, mu > 0)
 
 # Create a dataframe for survivors filtering by temperature cutof and 1 sd from 
-#   the mean of the estimate. Remove duplicate taxa. 
-df.survival <- subset(df, Experiment == 'survival' &
-                        Temp.cutoff %in% c('low thermo greater than 50 C','mid thermo greater than 50 C')) %>%
+#   the mean of the intercept. Remove duplicate taxa. 
+df.survival <- subset(df, experiment == 'survival' &
+                        T.cutoff %in% c('low thermo > 50 C','mid thermo > 50 C')) %>%
   subset(mu > (mean(mu)-1*sd(mu))) %>%
   mutate(survival.L2FC = L2FC) %>%
   dplyr::group_by(OTU) %>%
@@ -1187,7 +1189,7 @@ df.survival <- subset(df, Experiment == 'survival' &
 
 
 # Create dataframe for fast growers filtering for 1 sd from the mean: -----
-df.fast <- subset(df, Experiment == 'fast growth') %>%
+df.fast <- subset(df, experiment == 'fast growth') %>%
   subset(mu > (mean(mu)-1*sd(mu))) %>%
   mutate(fast.L2FC = L2FC)%>%
   dplyr::group_by(OTU) %>%
@@ -1199,8 +1201,8 @@ df.fast <- subset(df, Experiment == 'fast growth') %>%
 
 # Create data frame for affinity taxa filtering for temperature cutoff and 1
 #   sd from the mean:
-df.affinity <- subset(df, Experiment == 'affinity' &
-                        Temp.cutoff %in% c('low thermo greater than 50 C','mid thermo greater than 50 C')) %>%
+df.affinity <- subset(df, experiment == 'affinity' &
+                        T.cutoff %in% c('Low thermo > 50C','Mid thermo > 50C')) %>%
   subset(mu > (mean(mu)-1*sd(mu))) %>%
   mutate(affinity.L2FC = L2FC)%>%
   dplyr::group_by(OTU) %>%
@@ -1229,10 +1231,10 @@ write.csv(df.ids, '../tables/all-responding-otus.csv', row.names = FALSE)
 # Next take the full responder dataset and filter out any duplicate taxa
 
 x.1 <- df.full %>%
-  subset(Experiment == 'survival') %>%
-  subset(select = c(OTU, mu, Experiment,horizon,
+  subset(experiment == 'survival') %>%
+  subset(select = c(OTU, mu, experiment,horizon,
                     fold.change, L2FC)) %>%
-  dplyr::group_by(OTU, Experiment) %>%
+  dplyr::group_by(OTU, experiment) %>%
   dplyr::mutate(max.mu = max(abs(mu))) %>%
   subset(max.mu == abs(mu)) %>%
   dplyr::mutate(survival.L2FC = L2FC) %>%
@@ -1241,10 +1243,10 @@ x.1 <- df.full %>%
 
 
 x.2 <- df.full %>%
-  subset(Experiment == 'fast growth') %>%
-  subset(select = c(OTU, mu, Experiment,horizon,
+  subset(experiment == 'fast growth') %>%
+  subset(select = c(OTU, mu, experiment,horizon,
                     fold.change, L2FC)) %>%
-  dplyr::group_by(OTU, Experiment) %>%
+  dplyr::group_by(OTU, experiment) %>%
   dplyr::mutate(max.mu = max(abs(mu))) %>%
   subset(max.mu == abs(mu)) %>%
   dplyr::mutate(fast.L2FC = L2FC) %>%
@@ -1253,10 +1255,10 @@ x.2 <- df.full %>%
 
 
 x.3 <- df.full %>%
-  subset(Experiment == 'affinity') %>%
-  subset(select = c(OTU, mu, Experiment,horizon,
+  subset(experiment == 'affinity') %>%
+  subset(select = c(OTU, mu, experiment,horizon,
                     fold.change, L2FC)) %>%
-  dplyr::group_by(OTU, Experiment) %>%
+  dplyr::group_by(OTU, experiment) %>%
   dplyr::mutate(max.mu = max(abs(mu))) %>%
   subset(max.mu == abs(mu)) %>%
   dplyr::mutate(affinity.L2FC = L2FC) %>%
@@ -1630,7 +1632,7 @@ p1 = plot_ordination(ps.norm.gDNA, MyNMDS.full.gDNA, axes = c(1,2),
   #geom_line(aes(group = core.id.hor)) +
   labs(color = 'Burn treatment',
        #color = expression("Degree ("*degree*C*") hours"), 
-       shape = 'Experiment') +
+       shape = 'experiment') +
   #scale_color_gradientn(colours = c('gold2','red','red4','black')) +
   scale_color_manual(values = c('black','orange','red'),
                      labels = c('Unburned control', 'Wet soil burn','Wry soil burn'),
@@ -1815,55 +1817,55 @@ EXTRAS:
 ```{r}
 df <- read.csv('../data/sequence-data/LibCombined/corncob-output/all-responders.csv')
 
-unique(subset(df, select = c(Experiment, DNA.type, Comparison, pH.cutoff, Temp.cutoff)))
+unique(subset(df, select = c(experiment, DNA.type, Comparison, pH.cutoff, Temp.cutoff)))
 
 df.LI <- read.csv('../data/sequence-data/LibCombined/corncob-output/Ex3 Affinity/all-responders.csv')
 
 df$horizon <- factor(df$horizon, levels = c('O','A'))
-df$Experiment <- factor(df$Experiment, levels = c('survival','fast growth','affinity'))
+df$experiment <- factor(df$experiment, levels = c('survival','fast growth','affinity'))
 
 for (i in 1:nrow(df)) {
-  if (abs(df$Estimate[i]) > 2) {
-    df$trimmed.Estimate[i] = df$Estimate[i]
+  if (abs(df$intercept[i]) > 2) {
+    df$trimmed.intercept[i] = df$intercept[i]
   } else {
-    df$trimmed.Estimate[i] = NA
+    df$trimmed.intercept[i] = NA
   }
 }
 
 p = ggplot(df) + 
-  geom_histogram(aes(Estimate),fill = 'red', binwidth=1) + 
-  #geom_histogram(aes(trimmed.Estimate), fill = 'blue', binwidth=1) + 
+  geom_histogram(aes(intercept),fill = 'red', binwidth=1) + 
+  #geom_histogram(aes(trimmed.intercept), fill = 'blue', binwidth=1) + 
   theme_bw() + 
-  facet_grid(Experiment+DNA.type~horizon, scales = 'free')
+  facet_grid(experiment+DNA.type~horizon, scales = 'free')
 
 
 length(unique(subset(df, Temp.cutoff == 'Low thermo greater than 50 C' &
-                       Experiment == 'survival')$OTU))
+                       experiment == 'survival')$OTU))
 
 
 
-p1 = ggplot(subset(df, Experiment == 'survival'), aes(Estimate)) +
+p1 = ggplot(subset(df, experiment == 'survival'), aes(intercept)) +
   geom_histogram() + 
   theme_bw() + 
   facet_grid(horizon+Comparison~Temp.cutoff, scales = 'free')
 
-p2 = ggplot(subset(df, Experiment == 'fast growth'), aes(Estimate)) +
+p2 = ggplot(subset(df, experiment == 'fast growth'), aes(intercept)) +
   geom_histogram() + 
   theme_bw() + 
   facet_grid(horizon+Comparison~pH.cutoff, scales = 'free')
 
-p3 = ggplot(subset(df, Experiment == 'survival'), aes(Estimate)) +
+p3 = ggplot(subset(df, experiment == 'survival'), aes(intercept)) +
   geom_histogram() + 
   theme_bw() + 
   facet_grid(horizon+Comparison~Temp.cutoff, scales = 'free')
 
-length(unique(subset(df, Estimate > 0 & Experiment == 'affinity')$OTU))
-length(unique(subset(df, Estimate < 0 & Experiment == 'affinity')$OTU))
-length(unique(subset(df, Estimate > 1 & Experiment == 'affinity')$OTU))
-length(unique(subset(df, Estimate < -1 & Experiment == 'affinity')$OTU))
+length(unique(subset(df, intercept > 0 & experiment == 'affinity')$OTU))
+length(unique(subset(df, intercept < 0 & experiment == 'affinity')$OTU))
+length(unique(subset(df, intercept > 1 & experiment == 'affinity')$OTU))
+length(unique(subset(df, intercept < -1 & experiment == 'affinity')$OTU))
 
 
-dim(subset(df, Experiment == 'fast growth' &
+dim(subset(df, experiment == 'fast growth' &
              horizon == 'O' &
              Comparison == 'pb.dry.v.SI.dry' &
              pH.cutoff != 'null'))
@@ -1947,7 +1949,7 @@ p1 = ggplot(subset(df.LI.responders, horizon == 'O' & site != 19), aes(x=cntl.pH
   scale_fill_manual(values = c('forestgreen','grey50','red'),
                      limits = c('positive','none', 'negative'),
                      labels = c('Positive','No Response', 'Negative')) +
-  labs(title = 'Experiment3: Both LIn and LIwA data: controlling for pre-burn pH',
+  labs(title = 'experiment3: Both LIn and LIwA data: controlling for pre-burn pH',
        y = 'Relative abundance') + 
   theme(legend.position = 'bottom',
         axis.text.x = element_text(size=8), 
@@ -1974,7 +1976,7 @@ p2 = ggplot(subset(df.LI.sum, horizon == 'O' & Response != 'none' & burn.trtmt =
   #scale_color_manual(values = c('forestgreen','grey50','red'),
    #                  limits = c('positive','none', 'negative'),
     #                 labels = c('Positive','No Response', 'Negative')) +
-  labs(title = 'Experiment3: Responders identified LIwA.dry.vs.control \ncontrolling for pre-burn pH',
+  labs(title = 'experiment3: Responders identified LIwA.dry.vs.control \ncontrolling for pre-burn pH',
        y = 'Relative abundance',
        x = 'post-burn pH') + 
   theme(legend.position = 'bottom',
@@ -2016,11 +2018,11 @@ df$burn.trtmt <- factor(df$burn.trtmt, levels = c('control','wet','dry'))
 
 
 p <- ggplot(data = subset(df, burn.trtmt == 'dry' & horizon == 'O'), 
-            aes(x=site, y = Abundance, Fill = Experiment)) + 
+            aes(x=site, y = Abundance, Fill = experiment)) + 
   theme_bw()+
   #geom_point()+
   geom_bar(stat = 'identity') +
-  facet_wrap(~Experiment, scale = 'free') + 
+  facet_wrap(~experiment, scale = 'free') + 
   #stat_smooth(method=lm,se = FALSE,color='black') +
   theme(axis.text.x = element_text(angle = 90))
 ```
@@ -2642,7 +2644,7 @@ df.full <- df.full.OTU %>%
   subset(abs(Estimate) > 1) # removes 1500 non-unique OTUs
 dim(df.full)
 
-df.PB.pos.rspd <- subset(df.full, Experiment == 'survival' & Estimate > 0) %>%
+df.PB.pos.rspd <- subset(df.full, experiment == 'survival' & Estimate > 0) %>%
   subset(Temp.cutoff %in% c('Low thermo greater than 50 C',
                             'Mid thermo greater than 50 C')) %>%
   group_by(OTU,horizon) %>%
@@ -2651,7 +2653,7 @@ df.PB.pos.rspd <- subset(df.full, Experiment == 'survival' & Estimate > 0) %>%
   mutate(Response = 'positive') %>%
   unique()
 
-df.PB.neg.rspd <- subset(df.full, Experiment == 'survival' & Estimate < 0) %>%
+df.PB.neg.rspd <- subset(df.full, experiment == 'survival' & Estimate < 0) %>%
   subset(Temp.cutoff %in% c('Low thermo greater than 50 C',
                             'Mid thermo greater than 50 C')) %>%
   group_by(OTU, horizon) %>%
@@ -2667,13 +2669,13 @@ length(unique(df.PB.neg.rspd$OTU))
 
 
 
-df.SI.cntl.pos.rspd <- subset(df.full, Experiment == 'fast growth' & Estimate > 0) %>%
+df.SI.cntl.pos.rspd <- subset(df.full, experiment == 'fast growth' & Estimate > 0) %>%
   subset(Comparison == 'pb.control.v.SI.control') %>%
   group_by(OTU, horizon) %>%
   mutate(max.Estimate = max(Estimate)) %>%
   subset(max.Estimate == Estimate) %>%
   unique()
-df.SI.cntl.neg.rspd <- subset(df.full, Experiment == 'fast growth' & Estimate < 0) %>%
+df.SI.cntl.neg.rspd <- subset(df.full, experiment == 'fast growth' & Estimate < 0) %>%
   subset(Comparison == 'pb.control.v.SI.control') %>%
   group_by(OTU, horizon) %>%
   mutate(min.Estimate = min(Estimate)) %>%
@@ -2682,7 +2684,7 @@ df.SI.cntl.neg.rspd <- subset(df.full, Experiment == 'fast growth' & Estimate < 
 
 
 
-df.SI.pos.rspd <- subset(df.full, Experiment == 'fast growth' & Estimate > 0) %>%
+df.SI.pos.rspd <- subset(df.full, experiment == 'fast growth' & Estimate > 0) %>%
   subset(Temp.cutoff %in% c('Low thermo greater than 50 C',
                             'Mid thermo greater than 50 C')) %>%
   group_by(OTU, horizon) %>%
@@ -2693,7 +2695,7 @@ df.SI.pos.rspd <- subset(df.full, Experiment == 'fast growth' & Estimate > 0) %>
   subset(!(OTU %in% df.SI.cntl.pos.rspd$OTU))
 length(unique(df.SI.pos.rspd$OTU))
 
-df.SI.neg.rspd <- subset(df.full, Experiment == 'fast growth' & Estimate < 0) %>%
+df.SI.neg.rspd <- subset(df.full, experiment == 'fast growth' & Estimate < 0) %>%
   subset(Temp.cutoff %in% c('Low thermo greater than 50 C',
                             'Mid thermo greater than 50 C')) %>%
   group_by(OTU, horizon) %>%
@@ -2708,9 +2710,9 @@ length(unique(df.SI.neg.rspd$OTU))
 
 
 # LIwA:
-df.LIwA <- subset(df.full, Experiment == 'affinity')
+df.LIwA <- subset(df.full, experiment == 'affinity')
 
-df.LIwA.pos.rspd <- subset(df.full, Experiment == 'affinity' & Estimate > 0) %>%
+df.LIwA.pos.rspd <- subset(df.full, experiment == 'affinity' & Estimate > 0) %>%
   subset(Temp.cutoff %in% c('Low thermo greater than 50 C',
                             'Mid thermo greater than 50 C')) %>%
   group_by(OTU, horizon) %>%
@@ -2720,7 +2722,7 @@ df.LIwA.pos.rspd <- subset(df.full, Experiment == 'affinity' & Estimate > 0) %>%
   unique() 
 length(unique(df.LIwA.pos.rspd$OTU))
 
-df.LIwA.neg.rspd <- subset(df.full, Experiment == 'affinity' & Estimate < 0) %>%
+df.LIwA.neg.rspd <- subset(df.full, experiment == 'affinity' & Estimate < 0) %>%
   subset(Temp.cutoff %in% c('Low thermo greater than 50 C',
                             'Mid thermo greater than 50 C')) %>%
   group_by(OTU,horizon) %>%
@@ -2736,10 +2738,10 @@ df.responders <- rbind(df.PB.pos.rspd, df.PB.neg.rspd,
                        df.LIwA.pos.rspd, df.LIwA.neg.rspd)
 head(df.responders)
 
-p = ggplot(subset(df.responders, Phylum == 'Firmicutes'), aes(x=Estimate, y = Genus, color = Experiment)) + 
+p = ggplot(subset(df.responders, Phylum == 'Firmicutes'), aes(x=Estimate, y = Genus, color = experiment)) + 
   geom_point(size=2) + 
   theme_bw() + 
-  facet_grid(horizon~Experiment) + 
+  facet_grid(horizon~experiment) + 
   geom_vline(xintercept = 0)
 
 
