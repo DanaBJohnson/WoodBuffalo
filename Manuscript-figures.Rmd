@@ -6,24 +6,13 @@ output: html_document
 ---
 ```{r setup, include=FALSE}
 
-#library(knitr)
 library(ggplot2)
-#library(plyr)
 library(dplyr)
 library(tidyr)
-#library(car) # For Levene's Test
 library(phyloseq)
-#library(scatterplot3d)
-#library(ggtree)
-library(cowplot) # add-on to ggplot to assist in publication-quality figs
-#library(qwraps2)
+library(cowplot) 
 library(vegan)
 library(tidyverse)
-#library(psych) # scatterplot matrix (pairs, or pairs.panels)
-library(ggtern) # for ternary plots
-#library(devtools)
-#library(DivNet)
-#library(breakaway) # for richness estimates
 
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(out.width = '100%')
@@ -107,11 +96,6 @@ df.meta$burn.trtmt = factor(df.meta$burn.trtmt, levels = c('control','wet','dry'
 
 # Load phyloseq objects
 ```{r, message = FALSE}
-#df.pb.gDNA.OTU <- read.csv('../data/sequence-data/LibCombined/phyloseq-objects/df.pb.gDNA.norm.csv')
-#df.pb.cDNA.OTU <- read.csv('../data/sequence-data/LibCombined/phyloseq-objects/df.pb.cDNA.norm.csv')
-#df.SI.OTU <- read.csv('../data/sequence-data/LibCombined/phyloseq-objects/df.SI.norm.csv')
-#df.LI.norm <- read.csv('../data/sequence-data/LibCombined/phyloseq-objects/df.LI.norm.csv')
-
 # Starting phyloseq:
 ### Normalized + tree
 ps.norm.full <- readRDS('../../data/sequence-data/LibCombined/phyloseq-objects/ps.norm.full')
@@ -144,28 +128,13 @@ ps.raw.gDNA <- prune_samples(sample_data(ps.raw.full)$DNA.type == 'gDNA', ps.raw
 ps.norm.cDNA <- prune_samples(sample_data(ps.norm.full)$DNA.type == 'cDNA', ps.norm.full)
 ps.raw.cDNA <- prune_samples(sample_data(ps.raw.full)$DNA.type == 'cDNA', ps.raw.full)
 
-#ps.raw.pb <- prune_samples(sample_data(ps.raw.full)$incub.trtmt == 'pb', ps.raw.full)
-#ps.norm.pb <- prune_samples(sample_data(ps.norm.full)$incub.trtmt == 'pb', ps.norm.full)
-
-# ps.norm.pb
-#ps.norm.pb.gDNA <- prune_samples(sample_data(ps.norm.gDNA)$incub.trtmt == 'pb',ps.norm.gDNA)
-#ps.norm.pb.cDNA <- prune_samples(sample_data(ps.norm.cDNA)$incub.trtmt == 'pb',ps.norm.cDNA)
-# ps.norm.SI
-#ps.norm.SI <- prune_samples(sample_data(ps.norm.gDNA)$incub.trtmt == 'SI',ps.norm.gDNA)
-# ps.norm.LIwA
-#ps.norm.LIwA <- prune_samples(sample_data(ps.norm.gDNA)$incub.trtmt == 'LIwA',ps.norm.gDNA)
-#ps.norm.LIn <- prune_samples(sample_data(ps.norm.gDNA)$incub.trtmt == 'LIn',ps.norm.gDNA)
-#ps.norm.LI <- prune_samples(sample_data(ps.norm.gDNA)$incub.trtmt %in% c('LIn', 'LIwA'),ps.norm.gDNA)
-#ps.raw.LI <- prune_samples(sample_data(ps.raw.gDNA)$incub.trtmt %in% c('LIn', 'LIwA'),ps.raw.gDNA)
-
-#ps.norm.SI<- prune_taxa(taxa_sums(ps.norm.SI)>0, ps.norm.SI)
 ```
 
 
 
-# Figure 2 (burn temperature, pH and C:N change, respiration coefficients):
+# Figure 2A-C (burn temperature, pH and C:N change, respiration coefficients):
 ```{r}
-# Temperatures ----
+# Temperature, Fig. 2A ----
 df.Temp <-read.csv('../../data/burn-thermocouple-temp-logs/Temp-all-burns-clean.csv')
 df.Temp$Thermo_position <- factor(df.Temp$Thermo_position, levels = c('Mid','Low'))
 
@@ -197,7 +166,7 @@ pTemp = ggplot(df.Temp, aes(x = time_hr,
   geom_hline(yintercept=100)
 pTemp
 
-# pH and C:N change ----
+# pH and C:N change, Fig. 2B ----
 pChange_pH <- ggplot(subset(df.meta, incub.trtmt == 'SI')) + 
   geom_boxplot(aes(x=horizon, y = pH, fill = burn.trtmt), varwidth = FALSE) + 
     theme_bw()+
@@ -271,7 +240,7 @@ TukeyHSD(test)
 
 
 
-# Respiration coefficients ----
+# Respiration coefficients, Fig. 2C ----
 #   Decay model coefficients at end of 5 week incubation (Days=34)
 #   after adjusting for total C
 df.coefs <- read.csv('../../data/2-pool-decay-model-output-SI-adjusted-for-total-C.csv') %>%
@@ -346,7 +315,6 @@ pResp1 = ggplot(subset(df.stack, coefs %in% c('k1','k2')), aes(x=burn.trtmt)) +
        legend.position = '',
        strip.background = element_rect(colour="black", fill="grey92"))
 
-
 cowplot::plot_grid(pResp2, pResp1, ncol=2)
 
 # Stats ----
@@ -378,7 +346,7 @@ p = ggplot(df.stats, aes(x=burn.trtmt, y =k1)) +
 ```
 
 
-# Figure 3: RNA and DNA concentration (ng/g soil)
+# Figure 2D: RNA and DNA concentration (ng/g soil)
 ```{r}
 df <- read.csv('../../data/raw-data/pb-RNA-and-DNA-conc.csv')
 
@@ -497,7 +465,400 @@ TukeyHSD(test)
 
 ```
 
-Bray-Curtis dissimilarity?
+# Lab and field ordination, Figure 3 -----
+See "Merged_paper_figures_Revision_Github.R" script
+
+# Trait abundance in field data, Figure 4: ----
+See "Merged_paper_figures_Revision_GitHub.R" script
+
+# Rel abundance adjusted by copy num, Figure 5 -----
+See "Merged_paper_figures_Revision_GitHub.R" script
+
+# Total trait abun by BC dissimilarity, Figure 6 -----
+See "Merged_paper_figures_Revision_GitHub.R" script
+
+# Supplementary
+```{r}
+# Carbon and nitrogen loss, Figure S2 -----
+pChange_C <- ggplot(subset(df.meta, incub.trtmt == 'SI')) + 
+  geom_boxplot(aes(x=burn.trtmt, y = percent.total.C, fill = horizon), alpha = 0.7, varwidth = FALSE) + 
+    theme_bw()+
+  labs(x= 'Burn treatment',
+     #  y = 'Decay rate constant for fast C pool \nlog(k1)',
+       y = 'Total C (%)',
+       fill = 'Soil horizon') + 
+  scale_fill_manual(values = c('black','grey90'),
+                     limits = c('O','A'),
+                     labels = c('Organic','Mineral')) +
+  scale_x_discrete(limits = c('control','wet','dry'),
+                     labels = c('Unburned\ncontrol','Wet soil\nburn','Dry soil\nburn')) +
+  theme(axis.text.y = element_text(size = 14),
+        legend.title = element_text(size=14),
+        axis.text.x = element_text(size = 14),
+        axis.title.x = element_text(size = 14, margin = margin(t=10, b=10)),
+        axis.title.y = element_text(size = 14, margin = margin(r=10, l=10)),
+        strip.text = element_text(size=14),
+        legend.text = element_text(size=14),
+        legend.position = '',
+       # legend.background = element_rect(fill = "darkgray"),
+        legend.box = "vertical")
+
+pChange_N <- ggplot(subset(df.meta, incub.trtmt == 'SI')) + 
+  geom_boxplot(aes(x=burn.trtmt, y = percent.total.N, fill = horizon), alpha = 0.7, varwidth = FALSE) + 
+    theme_bw()+
+  labs(x= 'Burn treatment',
+     #  y = 'Decay rate constant for fast C pool \nlog(k1)',
+       y = 'Total N (%)',
+       fill = 'Soil horizon') + 
+  scale_fill_manual(values = c('black','grey90'),
+                     limits = c('O','A'),
+                     labels = c('Organic','Mineral')) +
+  scale_x_discrete(limits = c('control','wet','dry'),
+                     labels = c('Unburned\ncontrol','Wet soil\nburn','Dry soil\nburn')) +
+  theme(axis.text.y = element_text(size = 14),
+        legend.title = element_text(size=14),
+        axis.text.x = element_text(size = 14),
+        axis.title.x = element_text(size = 14, margin = margin(t=10, b=10)),
+        axis.title.y = element_text(size = 14, margin = margin(r=10, l=10)),
+        strip.text = element_text(size=14),
+        legend.text = element_text(size=14),
+        legend.position = '',
+       # legend.background = element_rect(fill = "darkgray"),
+        legend.box = "vertical")
+
+cowplot::plot_grid(pChange_C, pChange_N, ncol=2)
+
+test <- aov(percent.total.N ~ burn.trtmt, data = subset(df.meta, incub.trtmt == 'SI' & horizon == 'O'))
+summary(test)
+TukeyHSD(test)
+
+# C remaining as fraction of total, Figure S3, S4 -----
+#   See incubations_microbial_respiration.R
+# Full ordination, Fig. S6 ----
+ps.full.dataset <-readRDS('../../../CombinedFireSim1519/ps.1519FireSim.merged')
+tree <- ape::read.tree('../../../CombinedFireSim1519/tree/merged-exported-tree/tree.nwk')
+
+tree <- phy_tree(tree)
+tax <- tax_table(ps.full.dataset)
+otu <- otu_table(ps.full.dataset)
+sam <- sample_data(ps.full.dataset)
+
+ps.full.dataset = phyloseq::phyloseq(otu,tax, sam,tree)
+ps.full.dataset
+
+# Setting some plot parameters
+year.labs = c("One year post-fire","Five years post-fire")
+names(year.labs) = c(1,5)
+horizon.labs = c("Mineral","Organic")
+
+# Playing with new datasets
+ps = ps.full.dataset
+
+# Add column with pairs info
+sample_data(ps)$Pairs = paste(sample_data(ps)$Site_ID,sample_data(ps)$Org_or_Min,sep="_")
+head(sample_data(ps)$Pairs)
+
+# Normalize sample counts
+ps.norm = transform_sample_counts(ps,function(x) x/sum(x))
+sample_data(ps.norm)$Study = sample_data(ps.norm)$Years_Since_Fire
+sample_data(ps.norm)$Study[is.na(sample_data(ps.norm)$Study)]="Lab"
+
+
+ord.nmds = ordinate(ps.norm,method = "NMDS",ddistance="wunifrac",k=3, weighted=TRUE)
+
+plot_ordination(ps.norm,ord.pcoa,color="burn.trtmt",shape="incub.trtmt")
+plot_ordination(ps.norm,ord.nmds,color="pH",shape="Study")
+# Neat, they all fall out on top of each other. That's nice.
+colnames(sample_data(ps.norm))
+
+
+ps.norm.gDNA <- prune_samples(sample_data(ps.norm.gDNA)$incub.trtmt %in% c('pb','SI','LIwA'), ps.norm.gDNA)
+ps.norm.gDNA <- prune_taxa(taxa_sums(ps.norm.gDNA)>0,ps.norm.gDNA)
+
+MyNMDS.full.gDNA <- ordinate(ps.norm.gDNA, method = 'NMDS', k=3, ddistance="wunifrac", weighted=TRUE)
+
+# Ordination plot with horizons and deg.hrs
+p1 = plot_ordination(ps.norm.gDNA, MyNMDS.full.gDNA, axes = c(1,2), 
+                      color = "burn.trtmt",
+                      shape = 'incub.trtmt') + 
+  facet_grid(~horizon, labeller = labeller(horizon = HorizonLabels,
+                                                   DNA.type = DNALabels,
+                                                   incub.trtmt = IncubLabels))+
+  #facet_grid(~horizon, labeller = labeller(horizon = HorizonLabels))+
+  geom_point(size=3, alpha=0.8) +
+  #geom_line(aes(group = core.id.hor)) +
+  labs(color = 'Burn treatment',
+       #color = expression("Degree ("*degree*C*") hours"), 
+       shape = 'experiment') +
+  #scale_color_gradientn(colours = c('gold2','red','red4','black')) +
+  scale_color_manual(values = c('black','orange','red'),
+                     labels = c('Unburned control', 'Wet soil burn','Wry soil burn'),
+                     breaks = c('control','wet','dry'))+
+  scale_shape_manual(values = c('circle','square','triangle'),
+                     labels = c('Fire survival', 'Fast growth','Post-fire envir. affinity'),
+                     breaks = c('pb','SI','LIwA')) +
+  #scale_shape_discrete(labels = c('Picea' = 'Picea spp.', 'Populus_tremuloides' = 'Populus tremuloides','Pinus_banksiana' = 'Pinus banksiana')) +
+  #scale_shape_manual(values = c('circle','triangle'),
+   #                  labels = c('O horizon','Mineral'),
+    #                 breaks = c('O','A')) + 
+  theme(legend.text = element_text(face = 'italic',size = 16),
+        axis.title = element_text(size=16),
+        axis.text = element_text(size=16),
+        legend.title = element_text(size=16)) + 
+  theme_bw()
+
+p1
+
+# BC dissimilarity and pH change, Figure S7-----
+df.distances <- read.csv('../../data/bray-curtis-dissimilarites.csv')
+
+df.distances <- merge(df.distances, subset(df.meta, burn.trtmt != 'control'))    
+
+df.distances$incub.trtmt <- factor(df.distances$incub.trtmt, levels = c('pb','SI','LIwA','LIn'))
+df.distances$horizon <- factor(df.distances$horizon, levels = c('O','A')) 
+ 
+
+# plot: Dry soil burns
+p3=ggplot(subset(df.distances, incub.trtmt == 'LIwA' & burn.trtmt == 'dry'),
+         aes(x=change.pH, y = BC.distance.btw.burned.and.control, color = horizon, shape = horizon)) + 
+  geom_point(size=3, alpha = 0.8) +
+  theme_bw() +
+  facet_wrap(~horizon,ncol=2,
+             labeller = labeller(horizon = HorizonLabels),
+             scales = 'fixed') + 
+  labs(x = expression(Delta~'pH with burning'),
+       y = 'Bray-Curtis dissimilarity \ncompared to control', 
+       color = 'Soil horizon',
+       shape = 'Soil horizon') + 
+  scale_color_manual(values = c("darkgreen","grey70"),
+                     limits = c('O','A'),
+                     labels = c('Organic','Mineral')) +
+  scale_shape_manual(values = c('circle','triangle'),
+                     limits = c('O','A'),
+                     labels = c('Organic','Mineral')) +
+  theme(axis.title.x = element_text(size=14, margin = margin(t=10)),
+        axis.title.y = element_text(size=14, margin = margin(r=10)),
+        axis.text = element_text(size=12),
+        legend.title = element_text(size=14),
+        legend.text = element_text(size=14),
+        strip.text = element_text(size=14),
+        panel.spacing.x = unit(2, "lines"),
+       legend.position = 'right') +
+  stat_smooth(data = subset(df.distances, incub.trtmt == 'LIwA' & burn.trtmt == 'dry' & horizon == 'O'),
+              method=lm,se = FALSE,color='black') +
+    ylim(0,1)
+  
+
+
+# Respiration rate figures, S8, S9, S10-----
+#   See "incubations_microbial_respiration.R" script
+
+# Traits as fraction of total reads in lab data, Figure S11-----
+df <- read.csv('../../data/sequence-data/LibCombined/corncob-output/Manuscript/Trait-responder-OTUs.csv')
+
+ps.responders <- prune_taxa(taxa_names(ps.norm.full) %in% df$OTU, ps.norm.full)
+
+df.melt <- psmelt(ps.responders)
+
+responders <- df.melt %>% group_by(Sample) %>% summarize(Abundance) 
+max(responders$Abundance)
+mean(responders$Abundance)
+
+dry <- subset(df.melt, burn.trtmt == 'dry') %>% subset(select = c(Sample, horizon, burn.trtmt, Abundance, incub.trtmt, Thermo.mid.max)) %>% group_by(Sample) %>% mutate(total.Abun = sum(Abundance))
+
+summary(dry)
+
+# Total gDNA reads in lab experiments: 39115
+# Total reads in lab experiments: 43450
+# Number responders = 117
+# max abundance in lab data = 60%
+# mean abundance, dry burns = 0.15% +/- 14%
+
+
+df.frac.of.total <- df.melt %>% subset(select = c(Sample, horizon, burn.trtmt, Veg.type, Abundance, DNA.type, incub.trtmt, Thermo.mid.max, site)) %>% group_by(Sample) %>% mutate(total.Abun = sum(Abundance))
+
+
+p_FractionTotal <- ggplot(subset(df.frac.of.total, DNA.type == 'cDNA'), aes(x=site, y=total.Abun, fill=burn.trtmt)) +
+  geom_bar(stat='identity',  position='dodge') + 
+  facet_wrap(~horizon+incub.trtmt, labeller = labeller(horizon = HorizonLabels)) + 
+  theme_bw()+
+  labs(x= 'Sampling site ID',
+     #  y = 'Decay rate constant for fast C pool \nlog(k1)',
+       y = 'Fraction of total reads',
+       fill = 'Burn treatment') + 
+  scale_fill_manual(values = c('grey50','orange','red'),
+                     limits = c('control','wet','dry'),
+                     labels = c('Unburned\ncontrol','Moist soil\nburn','Dry soil\nburn')) +
+  theme(axis.text.y = element_text(size = 14),
+        legend.title = element_text(size=14),
+        axis.text.x = element_text(size = 14),
+        axis.title.x = element_text(size = 14, margin = margin(t=10, b=10)),
+        axis.title.y = element_text(size = 14, margin = margin(r=10, l=10)),
+        strip.text = element_text(size=14),
+        legend.text = element_text(size=14),
+        legend.position = '',
+       # legend.background = element_rect(fill = "darkgray"),
+        legend.box = "vertical")
+
+df.frac.of.total$burn.trtmt <- factor(df.frac.of.total$burn.trtmt, levels = c('control','wet','dry'))
+
+p_FractionTotal <- ggplot(subset(df.frac.of.total,incub.trtmt!='LIn'), aes(x=horizon, y=total.Abun, fill=burn.trtmt)) +
+  geom_boxplot()+
+  facet_wrap(~incub.trtmt+DNA.type, labeller = labeller(incub.trtmt = IncubLabels, DNA.type = DNALabels)) + 
+  theme_bw()+
+  labs(x= 'Soil horizon',
+     #  y = 'Decay rate constant for fast C pool \nlog(k1)',
+       y = 'Fraction of total reads',
+       fill = 'Burn treatment') + 
+  scale_fill_manual(values = c('grey50','orange','red'),
+                     limits = c('control','wet','dry'),
+                     labels = c('Unburned\ncontrol','Moist soil\nburn','Dry soil\nburn')) +
+    scale_x_discrete(limits = c('O','A'),
+                     labels = c('Organic','Mineral')) +
+  theme(axis.text.y = element_text(size = 14),
+        legend.title = element_text(size=14),
+        axis.text.x = element_text(size = 14),
+        axis.title.x = element_text(size = 14, margin = margin(t=10, b=10)),
+        axis.title.y = element_text(size = 14, margin = margin(r=10, l=10)),
+        strip.text = element_text(size=14),
+        legend.text = element_text(size=14),
+        legend.position = '',
+       # legend.background = element_rect(fill = "darkgray"),
+        legend.box = "vertical")
+
+
+
+
+```
+
+# PERMANOVAs, Supplementary:
+```{r}
+ps.E1 <- prune_samples(sample_data(ps.norm.full)$incub.trtmt == 'pb' &
+                         sample_data(ps.norm.full)$DNA.type == 'cDNA', ps.norm.full)
+ps.E1 <- prune_taxa(taxa_sums(ps.E1)>0, ps.E1)
+ps.E1
+
+ps.E1.DNA <- prune_samples(sample_data(ps.norm.full)$incub.trtmt == 'pb' &
+                         sample_data(ps.norm.full)$DNA.type == 'gDNA', ps.norm.full)
+ps.E1.DNA <- prune_taxa(taxa_sums(ps.E1.DNA)>0, ps.E1.DNA)
+ps.E1.DNA
+
+ps.E2 <- prune_samples(sample_data(ps.norm.full)$incub.trtmt == 'SI' &
+                         sample_data(ps.norm.full)$DNA.type == 'gDNA', ps.norm.full)
+ps.E2 <- prune_taxa(taxa_sums(ps.E2)>0, ps.E2)
+ps.E2
+
+ps.E3  <- prune_samples(sample_data(ps.norm.full)$incub.trtmt == 'LIwA' &
+                         sample_data(ps.norm.full)$DNA.type == 'gDNA', ps.norm.full)
+ps.E3 <- prune_taxa(taxa_sums(ps.E3)>0, ps.E3)
+ps.E3
+
+
+MyWunifrac_E1 <- distance(ps.E1, method = 'wunifrac')
+MyWunifrac_E1.DNA <- distance(ps.E1.DNA, method = 'wunifrac')
+MyWunifrac_E2 <- distance(ps.E2, method = 'wunifrac')
+MyWunifrac_E3 <- distance(ps.E3, method = 'wunifrac')
+MyWunifrac_All <- distance(ps.norm.gDNA, method = 'wunifrac')
+
+SamDat_E1 = data.frame(sample_data(ps.E1))
+SamDat_E1.DNA = data.frame(sample_data(ps.E1.DNA))
+SamDat_E2 = data.frame(sample_data(ps.E2))
+SamDat_E3 = data.frame(sample_data(ps.E3))
+SamDat_All = data.frame(sample_data(ps.norm.gDNA))
+
+test_E1 <- adonis(MyWunifrac_E1 ~ Veg.type+PRE.hor.thickness.cm+pH+percent.total.C+
+                    percent.total.N+texture+burn.trtmt+horizon, data = SamDat_E1)
+test_E1.DNA <- adonis(MyWunifrac_E1.DNA ~ Veg.type+PRE.hor.thickness.cm+pH+percent.total.C+
+                    percent.total.N+texture+burn.trtmt+horizon, data = SamDat_E1.DNA)
+test_E2 <- adonis(MyWunifrac_E2 ~ Veg.type+PRE.hor.thickness.cm+pH+percent.total.C+
+                    percent.total.N+texture+burn.trtmt+horizon, data = SamDat_E2)
+test_E3 <- adonis(MyWunifrac_E3 ~ Veg.type+PRE.hor.thickness.cm+pH+percent.total.C+
+                    percent.total.N+texture+burn.trtmt+horizon, data = SamDat_E3)
+test_All <- adonis(MyWunifrac_All ~ incub.trtmt+burn.trtmt+pH+horizon+Veg.type, data = SamDat_All)
+
+test_E1
+test_E1.DNA
+test_E2
+test_E3
+test_All
+
+
+test_E1_sub <- adonis(MyWunifrac_E1.DNA ~ percent.total.N, data = SamDat_E1.DNA)
+test_E1_sub
+
+# Fire survival
+adonis(MyWunifrac_E1 ~ Veg.type, data = SamDat_E1)
+adonis(MyWunifrac_E1 ~ PRE.hor.thickness.cm, data = SamDat_E1)
+adonis(MyWunifrac_E1 ~ pH, data = SamDat_E1)
+adonis(MyWunifrac_E1 ~ percent.total.C, data = SamDat_E1)
+adonis(MyWunifrac_E1 ~ percent.total.N, data = SamDat_E1)
+adonis(MyWunifrac_E1 ~ texture, data = SamDat_E1)
+adonis(MyWunifrac_E1 ~ burn.trtmt, data = SamDat_E1)
+adonis(MyWunifrac_E1 ~ horizon, data = SamDat_E1)
+
+adonis(MyWunifrac_E1.DNA ~ Veg.type, data = SamDat_E1.DNA)
+adonis(MyWunifrac_E1.DNA ~ PRE.hor.thickness.cm, data = SamDat_E1.DNA)
+adonis(MyWunifrac_E1.DNA ~ pH, data = SamDat_E1.DNA)
+adonis(MyWunifrac_E1.DNA ~ percent.total.C, data = SamDat_E1.DNA)
+adonis(MyWunifrac_E1.DNA ~ percent.total.N, data = SamDat_E1.DNA)
+adonis(MyWunifrac_E1.DNA ~ texture, data = SamDat_E1.DNA)
+adonis(MyWunifrac_E1.DNA ~ burn.trtmt, data = SamDat_E1.DNA)
+adonis(MyWunifrac_E1.DNA ~ horizon, data = SamDat_E1.DNA)
+
+
+# Fast growth
+adonis(MyWunifrac_E2 ~ Veg.type, data = SamDat_E2)
+adonis(MyWunifrac_E2 ~ PRE.hor.thickness.cm, data = SamDat_E2)
+adonis(MyWunifrac_E2 ~ pH, data = SamDat_E2)
+adonis(MyWunifrac_E2 ~ percent.total.C, data = SamDat_E2)
+adonis(MyWunifrac_E2 ~ percent.total.N, data = SamDat_E2)
+adonis(MyWunifrac_E2 ~ texture, data = SamDat_E2)
+adonis(MyWunifrac_E2 ~ burn.trtmt, data = SamDat_E2)
+adonis(MyWunifrac_E2 ~ horizon, data = SamDat_E2)
+
+
+# Test of autoclaving
+ps.E3.autoclave  <- prune_samples(sample_data(ps.norm.full)$incub.trtmt %in% c('LIwA','LIn'), ps.norm.full)
+ps.E3.autoclave <- prune_taxa(taxa_sums(ps.E3.autoclave)>0, ps.E3.autoclave)
+ps.E3.autoclave
+SamDat <- data.frame(sample_data(ps.E3.autoclave))
+head(SamDat,5)
+
+MyWunifrac_E3.autoclave <- distance(ps.E3.autoclave, method = 'wunifrac')
+
+SamDat_E3.autoclaving = data.frame(sample_data(ps.E3.autoclave))
+
+adonis(MyWunifrac_E3.autoclave ~ Veg.type+PRE.hor.thickness.cm+pH+percent.total.C+
+                    percent.total.N+texture+burn.trtmt+horizon + incub.trtmt, data = SamDat_E3.autoclaving)
+
+adonis(MyWunifrac_E3.autoclave ~ Veg.type, data = SamDat_E3.autoclaving)
+adonis(MyWunifrac_E3.autoclave ~ PRE.hor.thickness.cm, data = SamDat_E3.autoclaving)
+adonis(MyWunifrac_E3.autoclave ~ pH, data = SamDat_E3.autoclaving)
+adonis(MyWunifrac_E3.autoclave ~ percent.total.C, data = SamDat_E3.autoclaving)
+adonis(MyWunifrac_E3.autoclave ~ percent.total.N, data = SamDat_E3.autoclaving)
+adonis(MyWunifrac_E3.autoclave ~ texture, data = SamDat_E3.autoclaving)
+adonis(MyWunifrac_E3.autoclave ~ burn.trtmt, data = SamDat_E3.autoclaving)
+adonis(MyWunifrac_E3.autoclave ~ horizon, data = SamDat_E3.autoclaving)
+adonis(MyWunifrac_E3.autoclave ~ incub.trtmt, data = SamDat_E3.autoclaving)
+
+
+
+# All
+adonis(MyWunifrac_All ~ Veg.type, data = SamDat_All)
+adonis(MyWunifrac_All ~ pH, data = SamDat_All)
+adonis(MyWunifrac_All ~ incub.trtmt, data = SamDat_All)
+adonis(MyWunifrac_All ~ burn.trtmt, data = SamDat_All)
+adonis(MyWunifrac_All ~ horizon, data = SamDat_All)
+```
+
+
+
+
+
+
+
+
+Bray-Curtis dissimilarity? 
 ```{r, message = FALSE}
 # This is a possibly convoluted piece of code to first create a Bray-Curtis
 #     dissimilarity matrix and then pull out the dissimilarities between dry/wet
@@ -902,7 +1263,8 @@ df.norm.ratios$RNA.DNA.ratio = df.norm.ratios$RNA.abundance/df.norm.ratios$DNA.a
 ```
 
 
-# Figure 4 - weighted mean gene copy number
+
+# Weighted mean gene copy number
 Which bacteria are fast-growing following burn treatments of varying severity and under a range of moisture conditions?
 ```{r}
 df.WMCN.pb <- read.csv('../../data/WtMeanCopyNum_pb_gDNA.csv')
@@ -1113,2169 +1475,4 @@ p = ggplot(subset(df.SI.dry.responders, is.na(CopyNum) == FALSE), aes(x=Estimate
   facet_grid(Response~horizon) + 
   stat_smooth(method=lm,se = FALSE,color='black') +
   theme_bw() 
-```
-
-
-# Figure 5 - Calculate bray-curtis dissimilarity for autoclaving
-```{r, message = FALSE}
-df.distances <- read.csv('../../data/bray-curtis-dissimilarites.csv')
-
-df.distances <- merge(df.distances, subset(df.meta, burn.trtmt != 'control'))    
-
-df.distances$incub.trtmt <- factor(df.distances$incub.trtmt, levels = c('pb','SI','LIwA','LIn'))
-df.distances$horizon <- factor(df.distances$horizon, levels = c('O','A')) 
- 
-
-# plot: Dry soil burns
-p3=ggplot(subset(df.distances, incub.trtmt == 'LIwA' & burn.trtmt == 'dry'),
-         aes(x=change.pH, y = BC.distance.btw.burned.and.control, color = horizon, shape = horizon)) + 
-  geom_point(size=3, alpha = 0.8) +
-  theme_bw() +
-  facet_wrap(~horizon,ncol=2,
-             labeller = labeller(horizon = HorizonLabels),
-             scales = 'fixed') + 
-  labs(x = expression(Delta~'pH with burning'),
-       y = 'Bray-Curtis dissimilarity \ncompared to control', 
-       color = 'Soil horizon',
-       shape = 'Soil horizon') + 
-  scale_color_manual(values = c("darkgreen","grey70"),
-                     limits = c('O','A'),
-                     labels = c('Organic','Mineral')) +
-  scale_shape_manual(values = c('circle','triangle'),
-                     limits = c('O','A'),
-                     labels = c('Organic','Mineral')) +
-  theme(axis.title.x = element_text(size=14, margin = margin(t=10)),
-        axis.title.y = element_text(size=14, margin = margin(r=10)),
-        axis.text = element_text(size=12),
-        legend.title = element_text(size=14),
-        legend.text = element_text(size=14),
-        strip.text = element_text(size=14),
-        panel.spacing.x = unit(2, "lines"),
-       legend.position = 'right') +
-  stat_smooth(data = subset(df.distances, incub.trtmt == 'LIwA' & burn.trtmt == 'dry' & horizon == 'O'),
-              method=lm,se = FALSE,color='black') +
-    ylim(0,1)
-  
-test = lm(BC.distance.btw.burned.and.control~change.pH, data=subset(df.distances, incub.trtmt == 'LIwA' & horizon == 'A' & burn.trtmt == 'dry'))
-
-test
-summary(test)
-
-
-# Hrzn.degree.hrs vs. Bray-Curtis dissimilarities for -pb RNA and DNA -----
-p = ggplot(subset(df.meta.combined, burn.trtmt =='dry' & 
-                    incub.trtmt == 'pb'),
-           aes(x=hrzn.degree.hrs, y = BC.distance.btw.burned.and.control,fill = horizon)) +
-  geom_point(shape='circle filled',
-             stroke=1,
-             alpha = 0.8,
-             size=3) +
-  theme_bw() +
-  facet_grid(DNA.type~horizon, scales = 'free',
-             labeller = labeller(incub.trtmt = IncubLabels,
-                                 burn.trtmt = BurnLabels, 
-                                 DNA.type = DNALabels)) + 
-  labs(y = 'Bray-Curtis dissimilarity compared to control', 
-       title = 'Bray-Curtis dissimilarities') + 
-  scale_fill_manual(values = c('black','grey70'),
-                     limits = c('O','A'),
-                     labels = c('Organic','Mineral')) +
-  theme(axis.title = element_text(size=12),
-        axis.text = element_text(size=12),
-        legend.title = element_text(size=12),
-        legend.text = element_text(size=12)) + 
-    stat_smooth(method=lm,se = FALSE,color='black') 
-
-# Stats -----
-test <- aov(BC.distance.btw.burned.and.control ~ hrzn.degree.hrs, 
-            data = subset(df.meta.combined,incub.trtmt == 'pb' & DNA.type == 'cDNA' &burn.trtmt == 'wet'))
-summary(test) 
-```
-
-
-# Responders as fraction of total reads
-```{r}
-df <- read.csv('../../data/sequence-data/LibCombined/corncob-output/Manuscript/Trait-responder-OTUs.csv')
-
-ps.responders <- prune_taxa(taxa_names(ps.norm.full) %in% df$OTU, ps.norm.full)
-
-df.melt <- psmelt(ps.responders)
-
-responders <- df.melt %>% group_by(Sample) %>% summarize(Abundance) 
-max(responders$Abundance)
-mean(responders$Abundance)
-
-dry <- subset(df.melt, burn.trtmt == 'dry') %>% subset(select = c(Sample, horizon, burn.trtmt, Abundance, incub.trtmt, Thermo.mid.max)) %>% group_by(Sample) %>% mutate(total.Abun = sum(Abundance))
-
-summary(dry)
-
-# Total gDNA reads in lab experiments: 39115
-# Total reads in lab experiments: 43450
-# Number responders = 117
-# max abundance in lab data = 60%
-# mean abundance, dry burns = 0.15% +/- 14%
-
-
-df.frac.of.total <- df.melt %>% subset(select = c(Sample, horizon, burn.trtmt, Veg.type, Abundance, DNA.type, incub.trtmt, Thermo.mid.max, site)) %>% group_by(Sample) %>% mutate(total.Abun = sum(Abundance))
-
-
-p_FractionTotal <- ggplot(subset(df.frac.of.total, DNA.type == 'cDNA'), aes(x=site, y=total.Abun, fill=burn.trtmt)) +
-  geom_bar(stat='identity',  position='dodge') + 
-  facet_wrap(~horizon+incub.trtmt, labeller = labeller(horizon = HorizonLabels)) + 
-  theme_bw()+
-  labs(x= 'Sampling site ID',
-     #  y = 'Decay rate constant for fast C pool \nlog(k1)',
-       y = 'Fraction of total reads',
-       fill = 'Burn treatment') + 
-  scale_fill_manual(values = c('grey50','orange','red'),
-                     limits = c('control','wet','dry'),
-                     labels = c('Unburned\ncontrol','Moist soil\nburn','Dry soil\nburn')) +
-  theme(axis.text.y = element_text(size = 14),
-        legend.title = element_text(size=14),
-        axis.text.x = element_text(size = 14),
-        axis.title.x = element_text(size = 14, margin = margin(t=10, b=10)),
-        axis.title.y = element_text(size = 14, margin = margin(r=10, l=10)),
-        strip.text = element_text(size=14),
-        legend.text = element_text(size=14),
-        legend.position = '',
-       # legend.background = element_rect(fill = "darkgray"),
-        legend.box = "vertical")
-
-df.frac.of.total$burn.trtmt <- factor(df.frac.of.total$burn.trtmt, levels = c('control','wet','dry'))
-
-p_FractionTotal <- ggplot(subset(df.frac.of.total,incub.trtmt!='LIn'), aes(x=horizon, y=total.Abun, fill=burn.trtmt)) +
-  geom_boxplot()+
-  facet_wrap(~incub.trtmt+DNA.type, labeller = labeller(incub.trtmt = IncubLabels, DNA.type = DNALabels)) + 
-  theme_bw()+
-  labs(x= 'Soil horizon',
-     #  y = 'Decay rate constant for fast C pool \nlog(k1)',
-       y = 'Fraction of total reads',
-       fill = 'Burn treatment') + 
-  scale_fill_manual(values = c('grey50','orange','red'),
-                     limits = c('control','wet','dry'),
-                     labels = c('Unburned\ncontrol','Moist soil\nburn','Dry soil\nburn')) +
-    scale_x_discrete(limits = c('O','A'),
-                     labels = c('Organic','Mineral')) +
-  theme(axis.text.y = element_text(size = 14),
-        legend.title = element_text(size=14),
-        axis.text.x = element_text(size = 14),
-        axis.title.x = element_text(size = 14, margin = margin(t=10, b=10)),
-        axis.title.y = element_text(size = 14, margin = margin(r=10, l=10)),
-        strip.text = element_text(size=14),
-        legend.text = element_text(size=14),
-        legend.position = '',
-       # legend.background = element_rect(fill = "darkgray"),
-        legend.box = "vertical")
-
-
-
-# Table summarize composition of responders by phylum:
-df.phylum <- subset(df, select = c(mu.survival.max, mu.fast.max, mu.affinity.max, Phylum)) %>% unique()
-
-df.phylum %>% mutate(Phylum = as.factor(Phylum)) %>% subset(mu.affinity.max>0) %>%subset(select = c(Phylum)) %>% View()
-
-df.Class <- subset(df, select = c(mu.survival.max, mu.fast.max, mu.affinity.max, Class)) %>% unique()
-
-df.Class %>% mutate(Class = as.factor(Class)) %>% subset(mu.fast.max>0) %>%subset(select = c(Class)) %>% summary()
-
-
-
-# Count number of taxa by sample:
-# Create a factor corresponding to the Genera
-genfac = factor(tax_table(ps.norm.cDNA)[, "Genus"])
-# Tabulate the counts for each genera in each sample
-gentab = apply(otu_table(ps.norm.cDNA), MARGIN = 2, function(x) {
-    tapply(x, INDEX = genfac, FUN = sum, na.rm = TRUE, simplify = TRUE)
-})
-head(gentab)[, 1:10]
-
-x <- as.data.frame(gentab)
-```
-
-# New figures: 
-```{r}
-### BC dissim of burned vs. unburned on the x axis with a respiration metric on the y axis
-
-# Import BC dissimilarity data
-df.distances <- read.csv('../../data/bray-curtis-dissimilarites.csv')
-
-# Combine this with metadata
-df.distances <- merge(df.distances, subset(df.meta, burn.trtmt != 'control'))    
-
-# Organize
-df.distances$incub.trtmt <- factor(df.distances$incub.trtmt, levels = c('pb','SI','LIwA','LIn'))
-df.distances$horizon <- factor(df.distances$horizon, levels = c('O','A')) 
- 
-
-# Import respiration data:
-df.resp <- read.csv("../../data/fractional-c-remaining.csv")
-
-
-df.merge <- merge(df.distances, df.resp, by = c('core.id','incub.trtmt')) %>%
-  subset(incub.trtmt == 'SI') %>%
-  subset(DayFactor == 34) %>%
-  mutate(mass.C.respired = mass.C.remaining.g * (1-fractional.C.remaining))
-
-pBC = ggplot(df.merge, aes(x=BC.distance.btw.burned.and.control, y=k1, color = horizon)) + 
-  geom_point() + 
-  scale_color_manual(values = c('darkgreen','grey70'))+
-  stat_smooth(method=lm,se = FALSE,color='black') +
-  theme_bw() + 
-  #facet_wrap(~horizon, ncol=2,scales = 'fixed',
-   #          labeller = labeller(horizon = HorizonLabels))+
-  labs(y = 'Decay rate constant for \nfast C pool (k1)',
-       x = 'Bray-Curtis dissimilarity \ncompared to unburned control')
-
-
-summary(lm(data=df.merge,k1~BC.distance.btw.burned.and.control))
-
-
-
-
-### Ordination colored by respiration metric:
-# Full ordination
-ps.norm.SI <- prune_samples(sample_data(ps.norm.full)$incub.trtmt =='SI', ps.norm.full)
-ps.norm.SI <- prune_taxa(taxa_sums(ps.norm.SI)>0, ps.norm.SI)
-
-ord.nmds = ordinate(ps.norm.SI,method = "NMDS",ddistance="wunifrac",k=3, weighted=TRUE)
-
-# quick look at results:
-plot_ordination(ps.norm.SI,ord.nmds,color="burn.trtmt",shape="incub.trtmt")
-colnames(sample_data(ps.norm))
-
-
-
-# Ordination plot with horizons and deg.hrs
-p1 = plot_ordination(ps.norm.SI, ord.nmds, axes = c(1,2), color = "",
-                      shape = 'burn.trtmt') + 
-  #facet_grid(~horizon, labeller = labeller(horizon = HorizonLabels))+
-  geom_point(size=3, alpha=0.8) +
-  # scale_color_gradientn(colours = c('gold2','red','red4','black')) +
-  # scale_color_manual(values = c('black','orange','red'),
-  #                    labels = c('Unburned control', 'Wet soil burn','Wry soil burn'),
-  #                    breaks = c('control','wet','dry'))+
-  scale_shape_manual(values = c('circle','square','triangle'),
-                     labels = c('Unburned control', 'Moist soil','Dry soil'),
-                     breaks = c('control','wet','dry')) +
-  #scale_shape_discrete(labels = c('Picea' = 'Picea spp.', 'Populus_tremuloides' = 'Populus tremuloides','Pinus_banksiana' = 'Pinus banksiana')) +
-  #scale_shape_manual(values = c('circle','triangle'),
-   #                  labels = c('O horizon','Mineral'),
-    #                 breaks = c('O','A')) + 
-  theme(legend.text = element_text(size = 12),
-        axis.title = element_text(size=12),
-        axis.text = element_text(size=12),
-        legend.title = element_text(size=12)) + 
-  labs(shape = 'Burn treatment',
-       color = 'Fractional size\nof fast C pool') +
-  theme_bw()
-
-p1
-
-
-
-## What fraction of total reads in dry soil burns 24 hr post burn were bacillus?
-#  Bacillus fire surviving taxa = 8f0e2646c1389192d5a822f62bd295cf, 8adb5559e135233565acfea1287280bf
-df <- read.csv('../../data/sequence-data/LibCombined/corncob-output/Manuscript/Trait-responder-OTUs.csv')
-
-df.bac <- read.csv('../../data/sequence-data/LibCombined/corncob-output/Manuscript/Trait-responder-OTUs.csv') %>%
-  subset(mu.survival.max>0) %>%
-  subset(Genus=='Bacillus')
-  
-ps.norm.bac <- prune_samples(sample_data(ps.norm.gDNA)$incub.trtmt == 'pb', ps.norm.gDNA) 
-ps.norm.bac <- prune_taxa(taxa_names(ps.norm.bac) %in% df.bac$OTU, ps.norm.bac)
-
-bac <- psmelt(ps.norm.bac)
-# Answer 9% (8f0e2646c1389192d5a822f62bd295cf) and 4% (8adb5559e135233565acfea1287280bf) of total reads in dry soil burns
-
-
-### What percentage of all OTUs were identified as fast growers?
-df.fast <- df %>%
-  subset(mu.fast.max>0)
-
-ps.norm.SI <- prune_samples(sample_data(ps.norm.gDNA)$incub.trtmt == 'SI', ps.norm.gDNA) 
-ps.norm.SI <- prune_taxa(taxa_sums(ps.norm.SI)>0, ps.norm.SI)
-ps.norm.SI
-# Answer: IN the 5 week incubation, 0.4%
-
-
-
-### Max relative abundance of responding taxa in lab samples?
-ps.responders <- prune_taxa(taxa_names(ps.norm.gDNA) %in% df$OTU, ps.norm.gDNA)
-df.responders <- psmelt(ps.responders)
-
-df.responders <- df.responders %>%
-  subset(select = c(Sample, Abundance, Full.id,burn.trtmt))
-
-Num.responders <- df.responders %>% group_by(Full.id) %>% mutate(abun = sum(Abundance))
-max(Num.responders$abun) # = 0.604
-
-Num.responders.in.dry <- df.responders %>%
-  subset(burn.trtmt == 'dry') %>% 
-  group_by(Full.id) %>% 
-  mutate(combined.abun = sum(Abundance))
-
-
-mean(Num.responders.in.dry$combined.abun) # = 15
-sd(Num.responders.in.dry$combined.abun) # = 
-
-
-
-
-
-
-```
-
-
-
-
-
-
-# Figure 6: Trade offs
-```{r}
-
-df <- read.csv('../../data/sequence-data/LibCombined/corncob-output/Manuscript/all-responders.csv')
-df.L2FC <- read.csv('../../data/sequence-data/LibCombined/corncob-output/Full_L2FC.csv')
-
-
-
-# Checking to make sure that L2FC calculations didn't drop any OTUs. 
-df.survival <- df %>%
-  subset(experiment == 'survival'&
-           T.cutoff %in% c('Low thermo > 50C','Mid thermo > 50C') & 
-           intercept > 0) %>%
-  subset(intercept > (mean(intercept)-1*sd(intercept)) ) %>% 
-  subset(select = c(OTU,Phylum, Class, Order, Family, Genus, Species)) %>%
-  unique()
-
-df.survival.L2FC <- df.L2FC %>%
-  subset(experiment == 'survival'  &
-           T.cutoff %in% c('low thermo > 50C','Mid thermo > 50C') &
-           mu > 0) %>%
-  subset(mu > (mean(mu)-1*sd(mu))) %>%
-  subset(select = c(OTU)) %>%
-  unique()
-
-df.survival.merge <- merge(df.survival, df.survival.L2FC)
-#write.csv(df.survival,'../tables/survivors.csv', row.names=FALSE)
-
-dim(df.survival)
-dim(df.survival.L2FC)
-
-
-df.fast <- df %>%
-  subset(experiment == 'fast growth'&
-           intercept > 0) %>%
-  subset(intercept > (mean(intercept)-1*sd(intercept)) ) %>% 
-  subset(select = c(OTU,Phylum, Class, Order, Family, Genus, Species)) %>%
-  unique()
-dim(df.fast)
-
-df.fast.L2FC  <- df.L2FC %>%
-  subset(experiment == 'fast growth'  &
-           mu > 0) %>%
-  subset(mu > (mean(mu)-1*sd(mu))) %>%
-  subset(select = c(OTU)) %>%
-  unique() 
-dim(df.fast.L2FC)
-df.fast.merge <- merge(df.fast.L2FC, df.fast)
-
-
-
-df.affinity <- df %>%
-  subset(experiment == 'affinity'&
-           T.cutoff %in% c('Low thermo > 50','Mid thermo > 50') &
-           intercept > 0) %>%
-  subset(intercept > (mean(intercept)-1*sd(intercept)) ) %>% 
-  subset(select = c(OTU,Phylum, Class, Order, Family, Genus, Species)) %>%
-  unique()
-dim(df.affinity)
-
-df.affinity.L2FC  <- df.L2FC %>%
-  subset(experiment == 'affinity'  &
-           T.cutoff %in% c('low thermo > 50 C','mid thermo > 50 C') &
-           mu > 0) %>%
-  subset(mu > (mean(mu)-1*sd(mu))) %>%
-  subset(select = c(OTU)) %>%
-  unique() 
-dim(df.affinity.L2FC)
-
-df.affinity.merge <- merge(df.affinity.L2FC, df.affinity)
-
-
-df.full <- df.L2FC 
-  
-# Filter u ----
-# First pull out enriched taxa:
-df <-  subset(df.full, mu > 0)
-
-# Create a dataframe for survivors filtering by temperature cutof and 1 sd from 
-#   the mean of the intercept. Remove duplicate taxa. 
-df.survival <- subset(df, experiment == 'survival' &
-                        T.cutoff %in% c('low thermo > 50 C','mid thermo > 50 C')) %>%
-  subset(mu > (mean(mu)-1*sd(mu))) %>%
-  mutate(survival.L2FC = L2FC) %>%
-  dplyr::group_by(OTU) %>%
-  dplyr::mutate(max.mu = max(mu)) %>%
-  subset(mu == max.mu) %>%
-  subset(select = c(OTU, survival.L2FC)) %>%
-  unique()%>%
-  mutate(survivor = 'yes')
-
-
-# Create dataframe for fast growers filtering for 1 sd from the mean: -----
-df.fast <- subset(df, experiment == 'fast growth') %>%
-  subset(mu > (mean(mu)-1*sd(mu))) %>%
-  mutate(fast.L2FC = L2FC)%>%
-  dplyr::group_by(OTU) %>%
-  dplyr::mutate(max.mu = max(mu)) %>%
-  subset(mu == max.mu) %>%
-  subset(select = c(OTU, fast.L2FC)) %>%
-  unique() %>%
-  mutate(fast = 'yes')
-
-# Create data frame for affinity taxa filtering for temperature cutoff and 1
-#   sd from the mean:
-df.affinity <- subset(df, experiment == 'affinity' &
-                        T.cutoff %in% c('Low thermo > 50C','Mid thermo > 50C')) %>%
-  subset(mu > (mean(mu)-1*sd(mu))) %>%
-  mutate(affinity.L2FC = L2FC)%>%
-  dplyr::group_by(OTU) %>%
-  dplyr::mutate(max.mu = max(mu)) %>%
-  subset(mu == max.mu) %>%
-  subset(select = c(OTU, affinity.L2FC)) %>%
-  unique()%>%
-  mutate(affinity = 'yes')
-
-# Combine the three dataframes:
-df.index <- merge(df.survival, df.fast, all = TRUE) %>%
-  merge(df.affinity, all = TRUE) %>%
-  subset(select = c(OTU, survivor, fast, affinity))
-
-
-df.ids <- read.csv('../data/sequence-data/LibCombined/corncob-output/all-responders.csv') %>%
-  subset(select = c(OTU, Domain, Phylum, Class, Order, Family, Genus, Species)) %>%
-  unique()
-df.ids <- merge(df.index,df.ids, all = FALSE)
-write.csv(df.ids, '../tables/all-responding-otus.csv', row.names = FALSE)
-
-
-
-
-
-# Next take the full responder dataset and filter out any duplicate taxa
-
-x.1 <- df.full %>%
-  subset(experiment == 'survival') %>%
-  subset(select = c(OTU, mu, experiment,horizon,
-                    fold.change, L2FC)) %>%
-  dplyr::group_by(OTU, experiment) %>%
-  dplyr::mutate(max.mu = max(abs(mu))) %>%
-  subset(max.mu == abs(mu)) %>%
-  dplyr::mutate(survival.L2FC = L2FC) %>%
-  subset(select = c(OTU, survival.L2FC)) %>%
-  unique()
-
-
-x.2 <- df.full %>%
-  subset(experiment == 'fast growth') %>%
-  subset(select = c(OTU, mu, experiment,horizon,
-                    fold.change, L2FC)) %>%
-  dplyr::group_by(OTU, experiment) %>%
-  dplyr::mutate(max.mu = max(abs(mu))) %>%
-  subset(max.mu == abs(mu)) %>%
-  dplyr::mutate(fast.L2FC = L2FC) %>%
-  subset(select = c(OTU, fast.L2FC)) %>%
-  unique()
-
-
-x.3 <- df.full %>%
-  subset(experiment == 'affinity') %>%
-  subset(select = c(OTU, mu, experiment,horizon,
-                    fold.change, L2FC)) %>%
-  dplyr::group_by(OTU, experiment) %>%
-  dplyr::mutate(max.mu = max(abs(mu))) %>%
-  subset(max.mu == abs(mu)) %>%
-  dplyr::mutate(affinity.L2FC = L2FC) %>%
-  subset(select = c(OTU, affinity.L2FC)) %>%
-  unique()
-
-x <- merge(x.1, x.2, all = TRUE) %>%
-  merge(x.3, all = TRUE)
-
-# Create list of responding taxa:
-responding.OTU.list = unique(df.index$OTU)
-
-
-# Then filter this to include only taxa identified as responders (i.e. meeting
-#   the respective cutoffs for at least one of the three trait experiments)
-df.traits <- filter(x, OTU %in% responding.OTU.list) %>% 
-  unique()
-
-
-df.traits <- merge(df.index, df.traits)
-
-
-#df.traits <- test %>%
-#  merge(unique(subset(df, select = c(OTU, Domain, Phylum, Class, Order, Family, Genus, Species))))
-
-df.traits$trait = 'null'
-
-
-for (i in 1:nrow(df.traits)) {
-  if (df.traits$survivor[i] == 'yes' &
-      df.traits$survival.L2FC[i] > 0 &
-      is.na(df.traits$fast[i]) == TRUE &
-      is.na(df.traits$affinity[i]) == TRUE) {
-    df.traits$trait[i] = 'survival'
-      } else if (df.traits$fast[i] == 'yes' &
-                 df.traits$fast.L2FC[i] > 0 &
-                 is.na(df.traits$survivor[i]) == TRUE &
-                 is.na(df.traits$affinity[i]) == TRUE) {
-        df.traits$trait[i] = 'fast growth'
-      } else if (df.traits$affinity[i] == 'yes' &
-                 df.traits$affinity.L2FC[i] > 0 &
-                 is.na(df.traits$survivor[i]) == TRUE &
-                 is.na(df.traits$fast[i]) == TRUE) {
-        df.traits$trait[i] = 'affinity'
-      } else if (df.traits$survivor[i] == 'yes' &
-                 df.traits$survival.L2FC[i] > 0 &
-                 df.traits$fast[i] == 'yes' &
-                 df.traits$fast.L2FC[i] > 0 &
-                 is.na(df.traits$affinity[i]) == TRUE) {
-        df.traits$trait[i] = 'survival and fast growth'
-      } else if (df.traits$fast[i] == 'yes' &
-                 df.traits$fast.L2FC[i] > 0 &
-                 df.traits$affinity[i] == 'yes' &
-                 df.traits$affinity.L2FC[i] > 0 &
-                 is.na(df.traits$survivor[i]) == TRUE) {
-        df.traits$trait[i] = 'fast growth and affinity'
-      } else if (df.traits$survivor[i] == 'yes' &
-                 df.traits$survival.L2FC[i] > 0 &
-                 df.traits$affinity[i] == 'yes' &
-                 df.traits$affinity.L2FC[i] > 0 &
-                 is.na(df.traits$fast[i]) == TRUE) {
-        df.traits$trait[i] = 'survival and affinity'
-      } else if (df.traits$survivor[i] == 'yes' &
-                 df.traits$survival.L2FC[i] > 0 &
-                 df.traits$fast[i] == 'yes' &
-                 df.traits$fast.L2FC[i] > 0 &
-                 df.traits$affinity[i] == 'yes' &
-                 df.traits$affinity.L2FC[i] > 0) {
-        df.traits$trait[i] = 'survival, fast growth, \nand affinity'
-      } else {
-        df.traits$trait[i] = 'none'
-      } 
-}
-
-unique(df.traits$trait)
-
-
-head(df.traits)
-
-library(RColorBrewer)
-old.trait.colors = c('gold','green','royalblue3','purple','darkred','orange','black')
-trait.colors = c(brewer.pal(n=10, name = 'Spectral'), 'black')
-
-trait.colors = c('#E6AB02','#33A02C','#386CB0','#762A83','#D73027','#F46D43','black')
-
-
-# Finally build trait trade-off plots:
-p1 = ggplot(df.traits) + 
-  geom_hline(yintercept = 0) + 
-  geom_vline(xintercept = 0)+ 
-  geom_point(aes(x=survival.L2FC, y=fast.L2FC, color = trait, fill = trait), shape = 21,size=4, alpha=1) + 
-  theme_bw() +
-  labs(x= expression(Survival~(log[2]-fold~change)),
-       #  y = 'Decay rate constant for fast C pool \nlog(k1)',
-       y = expression(Fast~growth~(log[2]-fold~change))) + 
-  scale_color_manual(limits = c('survival','survival and fast growth','fast growth','fast growth and affinity',
-                                'affinity','affinity and survival','survival, fast growth, \nand affinity'),
-                     values = trait.colors) + 
-  scale_fill_manual(limits = c('survival','survival and fast growth','fast growth','fast growth and affinity',
-                                'affinity','affinity and survival','survival, fast growth, \nand affinity'),
-                     values = trait.colors) + 
-  theme(axis.text.y = element_text(size = 14),
-        legend.title = element_text(size=10),
-        axis.text.x = element_text(size = 14),
-        axis.title.x = element_text(size = 14, margin = margin(t=10, b=10)),
-        axis.title.y = element_text(size = 14, margin = margin(r=10, l=10)),
-        strip.text = element_text(size=14),
-        legend.text = element_text(size=10),
-        legend.position = 'none',
-        # legend.background = element_rect(fill = "darkgray"),
-        legend.box = "vertical")+
-  stat_smooth(aes(x=survival.L2FC, y=fast.L2FC),method=lm, se=FALSE, color = 'grey40',
-              geom = 'smooth')
-
-
-
-p2 = ggplot(df.traits) + 
-  geom_hline(yintercept = 0) + 
-  geom_vline(xintercept = 0)+ 
-  geom_point(aes(x=fast.L2FC, y=affinity.L2FC, color = trait, fill=trait), shape = 21,  size=4,alpha=1) + 
-  theme_bw() +
-  labs(x= expression(Fast~growth~(log[2]-fold~change)),
-       #  y = 'Decay rate constant for fast C pool \nlog(k1)',
-       y = expression(Post~fire~envir.~affinity~(log[2]-fold~change))) + 
-  scale_color_manual(limits = c('survival','survival and fast growth','fast growth','fast growth and affinity',
-                                'affinity','affinity and survival','survival, fast growth, \nand affinity'),
-                     values = trait.colors) + 
-  scale_fill_manual(limits = c('survival','survival and fast growth','fast growth','fast growth and affinity',
-                                'affinity','affinity and survival','survival, fast growth, \nand affinity'),
-                     values = trait.colors) + 
-  theme(axis.text.y = element_text(size = 14),
-        legend.title = element_text(size=10),
-        axis.text.x = element_text(size = 14),
-        axis.title.x = element_text(size = 14, margin = margin(t=10, b=10)),
-        axis.title.y = element_text(size = 14, margin = margin(r=10, l=10)),
-        strip.text = element_text(size=14),
-        legend.text = element_text(size=10),
-        legend.position = 'none',
-        # legend.background = element_rect(fill = "darkgray"),
-        legend.box = "vertical")
-
-p3 = ggplot(df.traits) + 
-  geom_hline(yintercept = 0) + 
-  geom_vline(xintercept = 0)+ 
-  geom_point(aes(x=affinity.L2FC, y=survival.L2FC, color = trait, fill = trait), 
-             shape = 21,size=4,alpha=1) + 
-  theme_bw() +
-  labs(x=expression(Post~fire~envir.~affinity~(log[2]-fold~change)),
-       #  y = 'Decay rate constant for fast C pool \nlog(k1)',
-       y = expression(Survival~(log[2]-fold~change)),
-       color = 'Bacterial strategy:',
-       fill = 'Bacterial strategy:') + 
-  scale_color_manual(limits = c('survival','survival and fast growth','fast growth','fast growth and affinity',
-                                'affinity','affinity and survival','survival, fast growth, \nand affinity'),
-                     values = trait.colors) + 
-  scale_fill_manual(limits = c('survival','survival and fast growth','fast growth','fast growth and affinity',
-                                'affinity','affinity and survival','survival, fast growth, \nand affinity'),
-                     values = trait.colors) + 
-  theme(axis.text.y = element_text(size = 14),
-        legend.title = element_text(size=14),
-        axis.text.x = element_text(size = 14),
-        axis.title.x = element_text(size = 14, margin = margin(t=10, b=10)),
-        axis.title.y = element_text(size = 14, margin = margin(r=10, l=10)),
-        strip.text = element_text(size=14),
-        legend.text = element_text(size=14),
-        legend.position = 'none',
-        # legend.background = element_rect(fill = "darkgray"),
-        legend.box = "vertical")
-cowplot::plot_grid(p1, p2,p3, ncol=3)
-
-
-test <- lm(fast.L2FC ~ affinity.L2FC, data = df.traits)
-summary(test)
-test
-# 
-
-x <- grDevices::rainbow(n=6)
-
-
-df <- read.csv('../data/sequence-data/LibCombined/corncob-output/all-responders.csv')
-df <- subset(df, select = c(OTU, Domain, Phylum, Class, Order, Family, Genus, Species)) %>%
-  unique()
-
-df.traits <- merge(df.traits,df)
-dim(df.traits)
-```
-
-
-```{r}
-# How much of total community do affinity taxa account for?
-ps.norm.LI <- prune_samples(sample_data(ps.norm.gDNA)$incub.trtmt == 'LIwA', ps.norm.gDNA)
-ps.norm.LI <- prune_taxa(taxa_names(ps.norm.LI) %in% df.affinity.L2FC$OTU, ps.norm.LI)
-
-df.norm.LI <- psmelt(ps.norm.LI)
-df.norm.LI$burn.trtmt = factor(df.norm.LI$burn.trtmt, levels = c('control','wet','dry'))
-
-df.norm.LI <- df.norm.LI %>%
-  group_by(core.id.hor.incub, horizon, burn.trtmt) %>%
-  summarize(sum.Abundance = sum(Abundance))
-
-p = ggplot(df.norm.LI, aes(x=burn.trtmt, y = sum.Abundance, color = horizon)) + 
-  geom_point() + 
-  facet_grid(~horizon) + 
-  theme_bw()
-```
-
-# PERMANOVAs:
-```{r}
-ps.E1 <- prune_samples(sample_data(ps.norm.full)$incub.trtmt == 'pb' &
-                         sample_data(ps.norm.full)$DNA.type == 'cDNA', ps.norm.full)
-ps.E1 <- prune_taxa(taxa_sums(ps.E1)>0, ps.E1)
-ps.E1
-
-ps.E1.DNA <- prune_samples(sample_data(ps.norm.full)$incub.trtmt == 'pb' &
-                         sample_data(ps.norm.full)$DNA.type == 'gDNA', ps.norm.full)
-ps.E1.DNA <- prune_taxa(taxa_sums(ps.E1.DNA)>0, ps.E1.DNA)
-ps.E1.DNA
-
-ps.E2 <- prune_samples(sample_data(ps.norm.full)$incub.trtmt == 'SI' &
-                         sample_data(ps.norm.full)$DNA.type == 'gDNA', ps.norm.full)
-ps.E2 <- prune_taxa(taxa_sums(ps.E2)>0, ps.E2)
-ps.E2
-
-ps.E3  <- prune_samples(sample_data(ps.norm.full)$incub.trtmt == 'LIwA' &
-                         sample_data(ps.norm.full)$DNA.type == 'gDNA', ps.norm.full)
-ps.E3 <- prune_taxa(taxa_sums(ps.E3)>0, ps.E3)
-ps.E3
-
-
-MyWunifrac_E1 <- distance(ps.E1, method = 'wunifrac')
-MyWunifrac_E1.DNA <- distance(ps.E1.DNA, method = 'wunifrac')
-MyWunifrac_E2 <- distance(ps.E2, method = 'wunifrac')
-MyWunifrac_E3 <- distance(ps.E3, method = 'wunifrac')
-MyWunifrac_All <- distance(ps.norm.gDNA, method = 'wunifrac')
-
-SamDat_E1 = data.frame(sample_data(ps.E1))
-SamDat_E1.DNA = data.frame(sample_data(ps.E1.DNA))
-SamDat_E2 = data.frame(sample_data(ps.E2))
-SamDat_E3 = data.frame(sample_data(ps.E3))
-SamDat_All = data.frame(sample_data(ps.norm.gDNA))
-
-test_E1 <- adonis(MyWunifrac_E1 ~ Veg.type+PRE.hor.thickness.cm+pH+percent.total.C+
-                    percent.total.N+texture+burn.trtmt+horizon, data = SamDat_E1)
-test_E1.DNA <- adonis(MyWunifrac_E1.DNA ~ Veg.type+PRE.hor.thickness.cm+pH+percent.total.C+
-                    percent.total.N+texture+burn.trtmt+horizon, data = SamDat_E1.DNA)
-test_E2 <- adonis(MyWunifrac_E2 ~ Veg.type+PRE.hor.thickness.cm+pH+percent.total.C+
-                    percent.total.N+texture+burn.trtmt+horizon, data = SamDat_E2)
-test_E3 <- adonis(MyWunifrac_E3 ~ Veg.type+PRE.hor.thickness.cm+pH+percent.total.C+
-                    percent.total.N+texture+burn.trtmt+horizon, data = SamDat_E3)
-test_All <- adonis(MyWunifrac_All ~ incub.trtmt+burn.trtmt+pH+horizon+Veg.type, data = SamDat_All)
-
-test_E1
-test_E1.DNA
-test_E2
-test_E3
-test_All
-
-
-test_E1_sub <- adonis(MyWunifrac_E1.DNA ~ percent.total.N, data = SamDat_E1.DNA)
-test_E1_sub
-
-# Fire survival
-adonis(MyWunifrac_E1 ~ Veg.type, data = SamDat_E1)
-adonis(MyWunifrac_E1 ~ PRE.hor.thickness.cm, data = SamDat_E1)
-adonis(MyWunifrac_E1 ~ pH, data = SamDat_E1)
-adonis(MyWunifrac_E1 ~ percent.total.C, data = SamDat_E1)
-adonis(MyWunifrac_E1 ~ percent.total.N, data = SamDat_E1)
-adonis(MyWunifrac_E1 ~ texture, data = SamDat_E1)
-adonis(MyWunifrac_E1 ~ burn.trtmt, data = SamDat_E1)
-adonis(MyWunifrac_E1 ~ horizon, data = SamDat_E1)
-
-adonis(MyWunifrac_E1.DNA ~ Veg.type, data = SamDat_E1.DNA)
-adonis(MyWunifrac_E1.DNA ~ PRE.hor.thickness.cm, data = SamDat_E1.DNA)
-adonis(MyWunifrac_E1.DNA ~ pH, data = SamDat_E1.DNA)
-adonis(MyWunifrac_E1.DNA ~ percent.total.C, data = SamDat_E1.DNA)
-adonis(MyWunifrac_E1.DNA ~ percent.total.N, data = SamDat_E1.DNA)
-adonis(MyWunifrac_E1.DNA ~ texture, data = SamDat_E1.DNA)
-adonis(MyWunifrac_E1.DNA ~ burn.trtmt, data = SamDat_E1.DNA)
-adonis(MyWunifrac_E1.DNA ~ horizon, data = SamDat_E1.DNA)
-
-
-# Fast growth
-adonis(MyWunifrac_E2 ~ Veg.type, data = SamDat_E2)
-adonis(MyWunifrac_E2 ~ PRE.hor.thickness.cm, data = SamDat_E2)
-adonis(MyWunifrac_E2 ~ pH, data = SamDat_E2)
-adonis(MyWunifrac_E2 ~ percent.total.C, data = SamDat_E2)
-adonis(MyWunifrac_E2 ~ percent.total.N, data = SamDat_E2)
-adonis(MyWunifrac_E2 ~ texture, data = SamDat_E2)
-adonis(MyWunifrac_E2 ~ burn.trtmt, data = SamDat_E2)
-adonis(MyWunifrac_E2 ~ horizon, data = SamDat_E2)
-
-
-# Test of autoclaving
-ps.E3.autoclave  <- prune_samples(sample_data(ps.norm.full)$incub.trtmt %in% c('LIwA','LIn'), ps.norm.full)
-ps.E3.autoclave <- prune_taxa(taxa_sums(ps.E3.autoclave)>0, ps.E3.autoclave)
-ps.E3.autoclave
-SamDat <- data.frame(sample_data(ps.E3.autoclave))
-head(SamDat,5)
-
-MyWunifrac_E3.autoclave <- distance(ps.E3.autoclave, method = 'wunifrac')
-
-SamDat_E3.autoclaving = data.frame(sample_data(ps.E3.autoclave))
-
-adonis(MyWunifrac_E3.autoclave ~ Veg.type+PRE.hor.thickness.cm+pH+percent.total.C+
-                    percent.total.N+texture+burn.trtmt+horizon + incub.trtmt, data = SamDat_E3.autoclaving)
-
-adonis(MyWunifrac_E3.autoclave ~ Veg.type, data = SamDat_E3.autoclaving)
-adonis(MyWunifrac_E3.autoclave ~ PRE.hor.thickness.cm, data = SamDat_E3.autoclaving)
-adonis(MyWunifrac_E3.autoclave ~ pH, data = SamDat_E3.autoclaving)
-adonis(MyWunifrac_E3.autoclave ~ percent.total.C, data = SamDat_E3.autoclaving)
-adonis(MyWunifrac_E3.autoclave ~ percent.total.N, data = SamDat_E3.autoclaving)
-adonis(MyWunifrac_E3.autoclave ~ texture, data = SamDat_E3.autoclaving)
-adonis(MyWunifrac_E3.autoclave ~ burn.trtmt, data = SamDat_E3.autoclaving)
-adonis(MyWunifrac_E3.autoclave ~ horizon, data = SamDat_E3.autoclaving)
-adonis(MyWunifrac_E3.autoclave ~ incub.trtmt, data = SamDat_E3.autoclaving)
-
-
-
-# All
-adonis(MyWunifrac_All ~ Veg.type, data = SamDat_All)
-adonis(MyWunifrac_All ~ pH, data = SamDat_All)
-adonis(MyWunifrac_All ~ incub.trtmt, data = SamDat_All)
-adonis(MyWunifrac_All ~ burn.trtmt, data = SamDat_All)
-adonis(MyWunifrac_All ~ horizon, data = SamDat_All)
-```
-
-
-# Figure 7:
-Ordinations
-```{r}
-# Full ordination
-ps.full.dataset <- readRDS('../../CombinedFireSim1519/ps.1519FireSim.merged')
-tree <- ape::read.tree('../../CombinedFireSim1519/tree/merged-exported-tree/tree.nwk')
-
-tree <- phy_tree(tree)
-tax <- tax_table(ps.full.dataset)
-otu <- otu_table(ps.full.dataset)
-sam <- sample_data(ps.full.dataset)
-
-ps.full.dataset = phyloseq::phyloseq(otu,tax, sam,tree)
-ps.full.dataset
-
-# Setting some plot parameters
-year.labs = c("One year post-fire","Five years post-fire")
-names(year.labs) = c(1,5)
-horizon.labs = c("Mineral","Organic")
-
-# Playing with new datasets
-ps = ps.full.dataset
-
-# Add column with pairs info
-sample_data(ps)$Pairs = paste(sample_data(ps)$Site_ID,sample_data(ps)$Org_or_Min,sep="_")
-head(sample_data(ps)$Pairs)
-
-# Normalize sample counts
-ps.norm = transform_sample_counts(ps,function(x) x/sum(x))
-sample_data(ps.norm)$Study = sample_data(ps.norm)$Years_Since_Fire
-sample_data(ps.norm)$Study[is.na(sample_data(ps.norm)$Study)]="Lab"
-
-
-ord.nmds = ordinate(ps.norm,method = "NMDS",ddistance="wunifrac",k=3, weighted=TRUE)
-
-plot_ordination(ps.norm,ord.pcoa,color="burn.trtmt",shape="incub.trtmt")
-plot_ordination(ps.norm,ord.nmds,color="pH",shape="Study")
-# Neat, they all fall out on top of each other. That's nice.
-colnames(sample_data(ps.norm))
-
-
-ps.norm.gDNA <- prune_samples(sample_data(ps.norm.gDNA)$incub.trtmt %in% c('pb','SI','LIwA'), ps.norm.gDNA)
-ps.norm.gDNA <- prune_taxa(taxa_sums(ps.norm.gDNA)>0,ps.norm.gDNA)
-
-MyNMDS.full.gDNA <- ordinate(ps.norm.gDNA, method = 'NMDS', k=3, ddistance="wunifrac", weighted=TRUE)
-
-# Ordination plot with horizons and deg.hrs
-p1 = plot_ordination(ps.norm.gDNA, MyNMDS.full.gDNA, axes = c(1,2), 
-                      color = "burn.trtmt",
-                      shape = 'incub.trtmt') + 
-  facet_grid(~horizon, labeller = labeller(horizon = HorizonLabels,
-                                                   DNA.type = DNALabels,
-                                                   incub.trtmt = IncubLabels))+
-  #facet_grid(~horizon, labeller = labeller(horizon = HorizonLabels))+
-  geom_point(size=3, alpha=0.8) +
-  #geom_line(aes(group = core.id.hor)) +
-  labs(color = 'Burn treatment',
-       #color = expression("Degree ("*degree*C*") hours"), 
-       shape = 'experiment') +
-  #scale_color_gradientn(colours = c('gold2','red','red4','black')) +
-  scale_color_manual(values = c('black','orange','red'),
-                     labels = c('Unburned control', 'Wet soil burn','Wry soil burn'),
-                     breaks = c('control','wet','dry'))+
-  scale_shape_manual(values = c('circle','square','triangle'),
-                     labels = c('Fire survival', 'Fast growth','Post-fire envir. affinity'),
-                     breaks = c('pb','SI','LIwA')) +
-  #scale_shape_discrete(labels = c('Picea' = 'Picea spp.', 'Populus_tremuloides' = 'Populus tremuloides','Pinus_banksiana' = 'Pinus banksiana')) +
-  #scale_shape_manual(values = c('circle','triangle'),
-   #                  labels = c('O horizon','Mineral'),
-    #                 breaks = c('O','A')) + 
-  theme(legend.text = element_text(face = 'italic',size = 16),
-        axis.title = element_text(size=16),
-        axis.text = element_text(size=16),
-        legend.title = element_text(size=16)) + 
-  theme_bw()
-
-p1
-```
-
-
-# Supplementary
-```{r}
-# Carbon and nitrogen loss
-pChange_C <- ggplot(subset(df.meta, incub.trtmt == 'SI')) + 
-  geom_boxplot(aes(x=burn.trtmt, y = percent.total.C, fill = horizon), alpha = 0.7, varwidth = FALSE) + 
-    theme_bw()+
-  labs(x= 'Burn treatment',
-     #  y = 'Decay rate constant for fast C pool \nlog(k1)',
-       y = 'Total C (%)',
-       fill = 'Soil horizon') + 
-  scale_fill_manual(values = c('black','grey90'),
-                     limits = c('O','A'),
-                     labels = c('Organic','Mineral')) +
-  scale_x_discrete(limits = c('control','wet','dry'),
-                     labels = c('Unburned\ncontrol','Wet soil\nburn','Dry soil\nburn')) +
-  theme(axis.text.y = element_text(size = 14),
-        legend.title = element_text(size=14),
-        axis.text.x = element_text(size = 14),
-        axis.title.x = element_text(size = 14, margin = margin(t=10, b=10)),
-        axis.title.y = element_text(size = 14, margin = margin(r=10, l=10)),
-        strip.text = element_text(size=14),
-        legend.text = element_text(size=14),
-        legend.position = '',
-       # legend.background = element_rect(fill = "darkgray"),
-        legend.box = "vertical")
-
-pChange_N <- ggplot(subset(df.meta, incub.trtmt == 'SI')) + 
-  geom_boxplot(aes(x=burn.trtmt, y = percent.total.N, fill = horizon), alpha = 0.7, varwidth = FALSE) + 
-    theme_bw()+
-  labs(x= 'Burn treatment',
-     #  y = 'Decay rate constant for fast C pool \nlog(k1)',
-       y = 'Total N (%)',
-       fill = 'Soil horizon') + 
-  scale_fill_manual(values = c('black','grey90'),
-                     limits = c('O','A'),
-                     labels = c('Organic','Mineral')) +
-  scale_x_discrete(limits = c('control','wet','dry'),
-                     labels = c('Unburned\ncontrol','Wet soil\nburn','Dry soil\nburn')) +
-  theme(axis.text.y = element_text(size = 14),
-        legend.title = element_text(size=14),
-        axis.text.x = element_text(size = 14),
-        axis.title.x = element_text(size = 14, margin = margin(t=10, b=10)),
-        axis.title.y = element_text(size = 14, margin = margin(r=10, l=10)),
-        strip.text = element_text(size=14),
-        legend.text = element_text(size=14),
-        legend.position = '',
-       # legend.background = element_rect(fill = "darkgray"),
-        legend.box = "vertical")
-
-cowplot::plot_grid(pChange_C, pChange_N, ncol=2)
-
-test <- aov(percent.total.N ~ burn.trtmt, data = subset(df.meta, incub.trtmt == 'SI' & horizon == 'O'))
-summary(test)
-TukeyHSD(test)
-
-
-
-# Traits
-df.resp.taxa <- merge(df.survival.L2FC, df.fast.L2FC, all = TRUE) %>% merge(df.affinity.L2FC, all = TRUE)
-
-ps.taxa <- prune_taxa(taxa_names(ps.norm.full) %in% df.resp.taxa$OTU, ps.norm.full)
-ps.taxa
-df.taxa <- psmelt(ps.taxa)
-
-# survival
-ps.survival.taxa <- prune_taxa(taxa_names(ps.norm.full) %in% df.survival.L2FC$OTU, ps.norm.full)
-ps.survival.taxa
-
-df.survival.taxa <- psmelt(ps.survival.taxa)
-
-df.survival.taxa$burn.trtmt <- factor(df.survival.taxa$burn.trtmt, levels = c('control','wet','dry'))
-
-p = ggplot(subset(df.survival.taxa, incub.trtmt == 'pb' & DNA.type == 'gDNA'), aes(x=site, y = Abundance)) + 
-  geom_bar(aes(fill = burn.trtmt),stat = 'identity',position = 'dodge') + 
-  theme_bw()+
-  facet_wrap(~horizon,ncol=1) + 
-  scale_fill_manual(values = c('black','slategray3','tan3'),
-                     limits = c('control','wet','dry'),
-                     labels = c('control','wet soil','dry soil'))+
-  labs(fill = 'Burn treatment',
-       x = 'site',
-       y='Total abundance (%)') + 
- theme(axis.text.y = element_text(size = 14),
-        legend.title = element_text(size=14),
-        axis.text.x = element_text(size = 14),
-        axis.title.x = element_text(size = 14, margin = margin(t=10, b=10)),
-        axis.title.y = element_text(size = 14, margin = margin(r=10, l=10)),
-        strip.text = element_text(size=14),
-        legend.text = element_text(size=14),
-        legend.position = '',
-       # legend.background = element_rect(fill = "darkgray"),
-        legend.box = "vertical")
-
-
-
-
-# fast
-ps.fast.taxa <- prune_taxa(taxa_names(ps.norm.full) %in% df.fast.L2FC$OTU, ps.norm.full)
-ps.fast.taxa
-
-df.fast.taxa <- psmelt(ps.fast.taxa)
-
-p = ggplot(subset(df.survival.taxa, incub.trtmt == 'SI' & DNA.type == 'gDNA'), aes(x=site, y = Abundance)) + 
-  geom_bar(aes(fill = burn.trtmt),stat = 'identity',position = 'dodge') + 
-  theme_bw()+
-  facet_wrap(~horizon,ncol=1) + 
-  scale_fill_manual(values = c('black','slategray3','tan3'),
-                     limits = c('control','wet','dry'),
-                     labels = c('control','wet soil','dry soil'))+
-  labs(fill = 'Burn treatment',
-       x = 'site',
-       y='Total abundance (%)') + 
- theme(axis.text.y = element_text(size = 14),
-        legend.title = element_text(size=14),
-        axis.text.x = element_text(size = 14),
-        axis.title.x = element_text(size = 14, margin = margin(t=10, b=10)),
-        axis.title.y = element_text(size = 14, margin = margin(r=10, l=10)),
-        strip.text = element_text(size=14),
-        legend.text = element_text(size=14),
-        legend.position = '',
-       # legend.background = element_rect(fill = "darkgray"),
-        legend.box = "vertical")
-
-# affinity
-ps.affinity.taxa <- prune_taxa(taxa_names(ps.norm.full) %in% df.affinity.L2FC$OTU, ps.norm.full)
-ps.affinity.taxa
-
-df.affinity.taxa <- psmelt(ps.affinity.taxa)
-
-p = ggplot(subset(df.survival.taxa, incub.trtmt == 'LIwA' & DNA.type == 'gDNA'), aes(x=site, y = Abundance)) + 
-  geom_bar(aes(fill = burn.trtmt),stat = 'identity',position = 'dodge') + 
-  theme_bw()+
-  facet_wrap(~horizon,ncol=1) + 
-  scale_fill_manual(values = c('black','slategray3','tan3'),
-                     limits = c('control','wet','dry'),
-                     labels = c('control','wet soil','dry soil'))+
-  labs(fill = 'Burn treatment',
-       x = 'site',
-       y='Total abundance (%)') + 
- theme(axis.text.y = element_text(size = 14),
-        legend.title = element_text(size=14),
-        axis.text.x = element_text(size = 14),
-        axis.title.x = element_text(size = 14, margin = margin(t=10, b=10)),
-        axis.title.y = element_text(size = 14, margin = margin(r=10, l=10)),
-        strip.text = element_text(size=14),
-        legend.text = element_text(size=14),
-        legend.position = 'right',
-       # legend.background = element_rect(fill = "darkgray"),
-        legend.box = "vertical")
-
-
-```
-
-FIN --------------------------------
-
-EXTRAS:
-
-
-
-# SI: plot responders as fraction of total comm. vs. total C mineralized over 5 week incub.
-```{r}
-### Goal plot with fraction of total comm by trait category vs. total C-CO2 respired after 5 weeks 
-
-# 1. import trait data
-df <- read.csv('../../data/sequence-data/LibCombined/corncob-output/Manuscript/Trait-responder-OTUs.csv')
-head(df)
-
-df$trait = 'TBD'
-
-# assign traits:
-for (i in 1:nrow(df)) {
-  if (is.na(df$mu.fast.max[i]) & is.na(df$mu.affinity.max[i])) {
-    df$trait[i] = 'Survivor' 
-  } else if (is.na(df$mu.survival.max[i]) & is.na(df$mu.affinity.max[i])) {
-    df$trait[i] = 'Fast grower' 
-  } else if (is.na(df$mu.survival.max[i]) & is.na(df$mu.fast.max[i])) {
-    df$trait[i] = 'Affinity taxa' 
-  } else if (is.na(df$mu.survival.max[i])) {
-    df$trait[i] = 'Fast grower and affinity taxa'
-  } else if (is.na(df$mu.affinity.max[i])) {
-    df$trait[i] = 'Survivor and fast grower'
-  } else if (is.na(df$mu.fast.max[i])) {
-    df$trait[i] = 'Survivor and affinity taxa' 
-  } else {
-    df$trait[i] = 'ALL'
-  }
-}
-
-
-
-
-
-# 2. import full comm data at end of SI incubation
-ps.norm.SI <- prune_samples(sample_data(ps.norm.full)$incub.trtmt == 'SI', ps.norm.full)
-
-# 3. Assign traits to OTUs in the SI comm data
-ps.norm.SI <- prune_taxa(taxa_names(ps.norm.SI) %in% df$OTU, ps.norm.SI)
-ps.norm.SI <- prune_taxa(taxa_sums(ps.norm.SI)>0, ps.norm.SI)
-
-df.norm.SI <- psmelt(ps.norm.SI)
-
-df.norm.SI <- merge(df.norm.SI, subset(df, select = c(OTU, trait)))
-
-p = ggplot(df.norm.SI, aes(x=burn.trtmt, y=Abundance)) + 
-  geom_bar(aes(fill=trait), stat='identity', position='stack')
-
-# 4. Import respiration data
-#df.resp <- read.csv("../../data/fractional-c-remaining.csv")
-# df.resp <- df (imported from "incubations_microbial_respiration_TLWcheck.R")
-
-
-# 5. sum total respiration at end of 5 weeks
-df.resp.SI <- subset(df.resp, Incubation.trtmt == 'SI') 
-
-# 6. merge trait and respiration dataframes
-df.sum <- df.norm.SI %>%
-  group_by(Full.id, trait) %>%
-  mutate(trait.abun = sum(Abundance)) %>%
-  subset(select = c(core.id,trait,trait.abun)) %>%
-  unique() %>%
-  merge(df.resp.SI, by = 'core.id')
-
-# 7. plot fraction of total comm vs. total C-CO2 respired
-p = ggplot(subset(df.sum, Day==34), aes(x=trait.abun, y = C.CO2.absorbed.per.g.C)) + 
-  geom_point(aes(color=trait)) + 
-  facet_wrap(~burn.trtmt)+
-  theme_bw() 
-  
-
-p = ggplot(df.sum, aes(x=(1-fractional.C.remaining),y=trait.abun)) + 
-  geom_bar(aes(fill=trait), stat='identity', position='stack') + 
-  theme_bw()
-
-
-# Initial mineralization after 2-7 days
-
-
-```
-
-
-# figuring out corncob + trait assignments
-```{r}
-df <- read.csv('../data/sequence-data/LibCombined/corncob-output/all-responders.csv')
-
-unique(subset(df, select = c(experiment, DNA.type, Comparison, pH.cutoff, Temp.cutoff)))
-
-df.LI <- read.csv('../data/sequence-data/LibCombined/corncob-output/Ex3 Affinity/all-responders.csv')
-
-df$horizon <- factor(df$horizon, levels = c('O','A'))
-df$experiment <- factor(df$experiment, levels = c('survival','fast growth','affinity'))
-
-for (i in 1:nrow(df)) {
-  if (abs(df$intercept[i]) > 2) {
-    df$trimmed.intercept[i] = df$intercept[i]
-  } else {
-    df$trimmed.intercept[i] = NA
-  }
-}
-
-p = ggplot(df) + 
-  geom_histogram(aes(intercept),fill = 'red', binwidth=1) + 
-  #geom_histogram(aes(trimmed.intercept), fill = 'blue', binwidth=1) + 
-  theme_bw() + 
-  facet_grid(experiment+DNA.type~horizon, scales = 'free')
-
-
-length(unique(subset(df, Temp.cutoff == 'Low thermo greater than 50 C' &
-                       experiment == 'survival')$OTU))
-
-
-
-p1 = ggplot(subset(df, experiment == 'survival'), aes(intercept)) +
-  geom_histogram() + 
-  theme_bw() + 
-  facet_grid(horizon+Comparison~Temp.cutoff, scales = 'free')
-
-p2 = ggplot(subset(df, experiment == 'fast growth'), aes(intercept)) +
-  geom_histogram() + 
-  theme_bw() + 
-  facet_grid(horizon+Comparison~pH.cutoff, scales = 'free')
-
-p3 = ggplot(subset(df, experiment == 'survival'), aes(intercept)) +
-  geom_histogram() + 
-  theme_bw() + 
-  facet_grid(horizon+Comparison~Temp.cutoff, scales = 'free')
-
-length(unique(subset(df, intercept > 0 & experiment == 'affinity')$OTU))
-length(unique(subset(df, intercept < 0 & experiment == 'affinity')$OTU))
-length(unique(subset(df, intercept > 1 & experiment == 'affinity')$OTU))
-length(unique(subset(df, intercept < -1 & experiment == 'affinity')$OTU))
-
-
-dim(subset(df, experiment == 'fast growth' &
-             horizon == 'O' &
-             Comparison == 'pb.dry.v.SI.dry' &
-             pH.cutoff != 'null'))
-             #Temp.cutoff != 'null'))
-
-
-
-
-```
-
-
-# PLotting rel. abundance of responders:
-Reallying interesting data. We're seeing interesting trends with positive responders.
-The relative abundance of positive responders increases across the dry soil post-burn
-pH range, but decreases across the control soil pH range. 
-```{r}
-df.full.OTU <- read.csv('../data/sequence-data/LibCombined/corncob-output/all-resopnders.csv')
-df.full3 <- read.csv('../data/sequence-data/LibCombined/corncob-output/Ex3 Affinity/all-responders.csv')
-df.LI.norm$burn.trtmt <- factor(df.LI.norm$burn.trtmt, levels = c('control','wet','dry'))
-
-for (i in 1:nrow(df.full3)) {
-  if (df.full3$Estimate[i] > 0) {
-    df.full3$Response[i] = 'positive'
-  } else if (df.full3$Estimate[i] < 0) {
-    df.full3$Response[i] = 'negative'
-  }
-}
-
-
-df.full3.LIn <-  subset(df.full3, Comparison %in% c('LIn.dry.v.LIn.control'))$OTU
-df.full3.LIwA <- subset(df.full3, Comparison %in% c('LIwA.dry.v.LIwA.control'))$OTU
-
-
-df.count <- df.full3 %>%
-  group_by(Comparison, Controlling.for) %>%
-  count(Response)
-
-
-# PUll out a subset of the corncob analyses:
-df.affinity <- subset(df.full3, Comparison %in% c('LIwA.dry.v.LIwA.control') &
-                        Controlling.for == 'pH category: low, mid, high' ) %>%
-  subset(select = c(OTU, horizon, Response))
-
-
-
-
-# OR just pull out positive responding OTUs:
-df.affinity <- df.full3 %>%
-  subset(Estimate > 0) %>%
-  subset(Comparison %in% c('LIwA.dry.v.LIwA.control') & Controlling.for =='control pH') %>%
-  subset(select = c(OTU, horizon, Response))
-
-# Create a list of positive/negative responding OTUs
-df.affinity.positive = subset(df.affinity, Response == 'positive')
-df.affinity.negative = subset(df.affinity, Response == 'negative')
-
-# Match these lists to the full community data.
-df.LI.positive.responders <- subset(df.LI.norm, OTU %in% df.affinity.positive$OTU)
-df.LI.negative.responders <- subset(df.LI.norm, OTU %in% df.affinity.negative$OTU)
-df.LI.not.responders <- subset(df.LI.norm, !OTU %in% df.affinity$OTU)
-
-# Create response categories to use in ggplot
-df.LI.positive.responders$Response = 'positive'
-df.LI.negative.responders$Response = 'negative'
-df.LI.not.responders$Response = 'none'
-
-# Combine the dataframe
-df.LI.responders <- rbind(df.LI.positive.responders,df.LI.negative.responders,df.LI.not.responders)
-
-# Convert pH to a character for the purpose of plotting
-df.LI.responders$pH <- as.character(df.LI.responders$pH)
-df.LI.responders$cntl.pH <- as.character(df.LI.responders$cntl.pH)
-
-
-p1 = ggplot(subset(df.LI.responders, horizon == 'O' & site != 19), aes(x=cntl.pH, y=Abundance, fill=Response))+
-  geom_bar(stat = 'identity') +
-  facet_grid(incub.trtmt~burn.trtmt, scales = 'free', 
-             labeller = labeller(incub.trtmt = IncubLabels, 
-                                 horizon = HorizonLabels,
-                                 burn.trtmt = BurnLabels)) +
-  scale_fill_manual(values = c('forestgreen','grey50','red'),
-                     limits = c('positive','none', 'negative'),
-                     labels = c('Positive','No Response', 'Negative')) +
-  labs(title = 'experiment3: Both LIn and LIwA data: controlling for pre-burn pH',
-       y = 'Relative abundance') + 
-  theme(legend.position = 'bottom',
-        axis.text.x = element_text(size=8), 
-        legend.text = element_text(size=8))
-
-
-
-df.LI.sum <- df.LI.responders %>%
-  group_by(Full.id, Response) %>%
-  mutate(sum.abun = sum(Abundance)) %>%
-  subset(select = c(Full.id, pH, cntl.pH, horizon, burn.trtmt, incub.trtmt, Response,site, sum.abun)) %>%
-  unique()
-
-df.LI.sum$burn.trtmt <- factor(df.LI.sum$burn.trtmt, levels = c('control','wet','dry'))
-df.LI.sum$site <- as.character(df.LI.sum$site)
-
-p2 = ggplot(subset(df.LI.sum, horizon == 'O' & Response != 'none' & burn.trtmt == 'dry'), aes(x=pH, y=(sum.abun), color = site))+
-  geom_point(size=3) +
-  facet_grid(incub.trtmt~burn.trtmt, scales = 'free', 
-             labeller = labeller(incub.trtmt = IncubLabels, 
-                                 horizon = HorizonLabels,
-                                 burn.trtmt = BurnLabels)) +
-        stat_smooth(method=lm,se = FALSE,color='black') +
-  #scale_color_manual(values = c('forestgreen','grey50','red'),
-   #                  limits = c('positive','none', 'negative'),
-    #                 labels = c('Positive','No Response', 'Negative')) +
-  labs(title = 'experiment3: Responders identified LIwA.dry.vs.control \ncontrolling for pre-burn pH',
-       y = 'Relative abundance',
-       x = 'post-burn pH') + 
-  theme(legend.position = 'bottom',
-        axis.text.x = element_text(size=8), 
-        legend.text = element_text(size=8))+
-  ylim(0,0.2)
-
-```
-
-
-
-# Mapping relative abundance of responding taxa across experiments:
-```{r}
-df.full.OTU <- read.csv('../data/sequence-data/LibCombined/corncob-output/all-resopnders.csv')
-
-df.pb.gDNA.OTU <- read.csv('../data/sequence-data/LibCombined/phyloseq-objects/df.pb.gDNA.norm.csv')
-df.SI.OTU <- read.csv('../data/sequence-data/LibCombined/phyloseq-objects/df.SI.norm.csv')
-df.LI.norm <- read.csv('../data/sequence-data/LibCombined/phyloseq-objects/df.LI.norm.csv')
-
-
-
-p = ggplot(data = df.pb.gDNA.OTU, aes(x=site, y = Abundance, fill = Phylum)) + 
-  geom_bar(stat = 'identity') + 
-  facet_grid(burn.trtmt~horizon) + 
-  theme_bw()
-
-df <- df.full.OTU %>%
-  subset(Estimate > 0) %>%
-  group_by(OTU) %>%
-  mutate(max.Estimate = max(Estimate)) %>%
-  subset(abs(Estimate) > 1) %>%
-  merge(df.LI.norm) %>%
-  subset(incub.trtmt == 'LIwA')
-
-
-df$site <- as.character(df$site)
-df$change.pH <- as.character(df$change.pH)
-df$burn.trtmt <- factor(df$burn.trtmt, levels = c('control','wet','dry'))
-
-
-p <- ggplot(data = subset(df, burn.trtmt == 'dry' & horizon == 'O'), 
-            aes(x=site, y = Abundance, Fill = experiment)) + 
-  theme_bw()+
-  #geom_point()+
-  geom_bar(stat = 'identity') +
-  facet_wrap(~experiment, scale = 'free') + 
-  #stat_smooth(method=lm,se = FALSE,color='black') +
-  theme(axis.text.x = element_text(angle = 90))
-```
-
-# Exploring composition data for 24-hours post-burn:
-```{r}
-#df.pb.gDNA.OTU <- read.csv('../data/sequence-data/LibCombined/phyloseq-objects/df.pb.gDNA.norm.csv')
-#df.pb.cDNA.OTU <- read.csv('../data/sequence-data/LibCombined/phyloseq-objects/df.pb.cDNA.norm.csv')
-
-p = ggplot(data = df.pb.gDNA.OTU, aes(x=site, y = Abundance, fill = Phylum)) + 
-  geom_bar(stat='identity')+
-  facet_grid(horizon~burn.trtmt, labeller = labeller(horizon = HorizonLabels,
-                                                     burn.trtmt = BurnLabels)) + 
-  theme_bw() +
-  theme(legend.position = 'bottom')
-  
-
-# Most abundant taxa; most abundant responders:
-df <- df.pb.gDNA.OTU %>%
-  group_by(Family) %>%
-  mutate(sum.Abundance = sum(Abundance))
-
-p = ggplot(data = subset(df, sum.Abundance > 2.08), aes(x=site, y = Abundance, fill = Class)) + 
-  geom_bar(stat='identity')+
-  facet_grid(horizon~burn.trtmt, labeller = labeller(horizon = HorizonLabels,
-                                                     burn.trtmt = BurnLabels)) + 
-  theme_bw() +
-  theme(legend.position = 'bottom')
-
-```
-
-
-# Calculate bray-curtis dissimilarity for LIwA vs. SI
-```{r, message = FALSE}
-# This is a possibly convoluted piece of code to first create a Bray-Curtis
-#     dissimilarity matrix and then pull out the dissimilarities between SI and
-#     LIwA cores.
-ps.bray <- prune_samples(sample_data(ps.raw.gDNA)$DNA.type == 'gDNA' &
-                           sample_data(ps.raw.gDNA)$incub.trtmt %in% c('SI','LIwA')&
-                           sample_data(ps.raw.gDNA)$Full.id %in% df.meta$Full.id, ps.raw.gDNA)
-
-ps.bray <- prune_taxa(taxa_sums(ps.bray) > 0, ps.bray)
-
-dist.bray.SIvLIwA <- as.matrix(distance(ps.bray, method = 'bray', type = 'samples'))
-
-# Convert distance matrix into dataframe
-df <- data.frame(dist.bray.SIvLIwA)
-
-# Bring in meta data and subset for specific analysis
-df.meta.sub <- subset(df.meta, select = c(Full.id, burn.trtmt,site, core.id.hor,
-                                          incub.trtmt,core, horizon)) %>%
-  subset(incub.trtmt %in% c('SI','LIwA')) %>%
-  unique()
-
-# Combine metadata and distances so we can use burn treatment to sort
-#df <- merge(df, df.meta.pb.cDNA) 
-
-# Create a dataframe with the colnames and Full.ID
-x <- data.frame(str_split(colnames(df)[1:276], 'X', simplify = TRUE)[,2])
-
-# Rename columes:
-colnames(x)[1] <- 'ID.bray'
-
-# Clean up x. 
-x <- x %>%
-  mutate(Full.id = ID.bray)
-
-x$Full.id <- str_replace_all(x$Full.id, "\\.", "-")
-
-x$X <- 'X'
-
-x <- x %>%
-  unite(Bray.ID, c('X',"ID.bray"), sep = '', remove = TRUE) %>%
-  unique()
-
-
-# Create row with LIwA id, SI id, and core.id.hor:
-df.LIwA <- subset(df.meta, incub.trtmt == 'LIwA') %>%
-  mutate(LIwA.full.id = Full.id) %>%
-  subset(select = c(core.id.hor, LIwA.full.id))
-
-df.SI <- subset(df.meta, incub.trtmt == 'SI') %>%
-  mutate(SI.full.id = Full.id) %>%
-  subset(select = c(core.id.hor, SI.full.id)) %>%
-  unique()
-
-#df.list <- merge(df.LIwA, df.SI, by = 'core.id.hor')
-
-# ANd then combine the Full.id list with the control core meta data I just created.
-#     df.list now contains Full.id with the corresponding control sample for each 
-#     dry/wet burn and a column ("Bray.ID") that has the sample ID formatted to 
-#     match the distance matrix names.
-df.list <- df.SI %>%
-  merge(df.meta.sub, by = 'core.id.hor') %>%
-  merge(x, by = 'Full.id') %>%
-  subset(incub.trtmt == 'LIwA') %>%
-  unique()
-
-df.list$burn.trtmt <- as.character(df.list$burn.trtmt)
-df.list$horizon <- as.character(df.list$horizon)
-df.list$incub.trtmt <- as.character(df.list$incub.trtmt)
-
-
-head(df.meta.sub)
-# Create and empty data frame to store distances
-df.distances <- data.frame("Full.id" = df.list$Full.id, 'core.id.hor' = 'core.id.hor',
-                           'burn.trtmt' = 'burn', 'SI.full.id' = 'SI.full.id',
-                           'horizon' = 'H',
-                           'BC.distance.btw.SI.and.LIwA' = 'distance',
-                           'incub.trtmt' = 'incub') %>%
-  unique()
-
-# Now run a convoluted loop:
-for (i in 1:nrow(df.list)) { # For each sample (row in df.list)
-  for (j in 1:nrow(df)) { # For each row in the dissimilarity matrix
-    for (k in 1:ncol(df)){ # And for each colume in the dissimilarity matrix
-      if(colnames(df)[k] == df.list$Bray.ID[i] &  # If the distance matrix colume ID matches the sample ID in the list
-         rownames(df)[j] == df.list$SI.full.id[i]) { # And the rowname ID matches the corresponding control core, then...
-        df.distances$BC.distance.btw.SI.and.LIwA[i] = df[j,k] # Pull out the distance and store it in new dataframe
-        df.distances$burn.trtmt[i] = df.list$burn.trtmt[i]
-        df.distances$horizon[i] = df.list$horizon[i]
-        df.distances$incub.trtmt[i] = df.list$incub.trtmt[i]
-        df.distances$SI.full.id[i] = df.list$SI.full.id[i]
-      }
-    } 
-  } 
-}
-
-# Remove any samples that didn't have duplicates between LIwA and SI
-df.distances <- subset(df.distances, horizon != 'H')
-
-df.distances$BC.distance.btw.SI.and.LIwA <- as.numeric(df.distances$BC.distance.btw.SI.and.LIwA)
-
-df.distances$incub.trtmt <- factor(df.distances$incub.trtmt, levels = c('pb','SI','LIwA','LIn'))
-
-p=ggplot(subset(df.distances,horizon=='O')) + 
-  geom_boxplot(aes(x=burn.trtmt, y = BC.distance.btw.SI.and.LIwA, fill = horizon),
-               alpha = 0.5) +
-  theme_bw() +
-  facet_wrap(~horizon, ncol=3,
-             labeller = labeller(horizon = HorizonLabels)) + 
-  labs(x='Burn treatment',
-       #y = 'Bray-Curtis dissimilarity between \nsoil 5 weeks post-burn vs. inoculated soil 6 months post-burn',
-       y='Bray-Curtis dissimilarity',
-       fill = 'Soil horizon',
-       title = 'Bray-Curtis dissimilarities for gDNA') + 
-  scale_fill_manual(values = c('black','grey80'),
-                     limits = c('O','A'),
-                     labels = c('Organic','Mineral')) +
-  scale_x_discrete(limits = c('control','wet','dry'),
-                   labels = c('Unburned \ncontrol', 'Wet soil \nburn','Dry soil \nburn')) +
-  theme(axis.title = element_text(size=18),
-        axis.text = element_text(size=18),
-        legend.title = element_text(size=18),
-        legend.text = element_text(size=18),
-        strip.text = element_text(size=18))+
-  ylim(0,1)
-  
-
-test <- aov(BC.distance.btw.SI.and.LIwA~burn.trtmt, data = subset(df.distances,horizon=='O'))
-summary(test)
-TukeyHSD(test)
-
-df.meta.combined <- merge(df.meta, df.distances, by = c('Full.id', 'burn.trtmt', 'horizon', 'incub.trtmt'))
-  
-
-
-p = ggplot(subset(df.meta.combined, horizon == 'A'),aes(x=Thermo.mid.max, y = BC.distance.btw.burned.and.control, fill = horizon)) +
-  geom_point(shape='circle filled',
-             stroke=1,
-             alpha = 0.8,
-             size=3) +
-  theme_bw() +
-  facet_wrap(burn.trtmt~incub.trtmt, scales = 'free',
-             labeller = labeller(incub.trtmt = IncubLabels,
-                                 burn.trtmt = BurnLabels)) + 
-  labs(x='Max temp, mid-point',
-       y = 'Bray-Curtis dissimilarity compared to control; A horizon', 
-       fill = 'Soil horizon',
-       title = 'Bray-Curtis dissimilarities for gDNA') + 
-  scale_fill_manual(values = c('black','grey40'),
-                     limits = c('O','A'),
-                     labels = c('Organic','Mineral')) +
-  theme(axis.title = element_text(size=12),
-        axis.text = element_text(size=12),
-        legend.title = element_text(size=12),
-        legend.text = element_text(size=12)) + 
-    stat_smooth(method=lm,se = FALSE,color='black') 
-  
-```
-
-
-# Control pH vs. Delta pH:
-```{r}
-pChange_pH <- ggplot(subset(df.meta, burn.trtmt != 'control'),aes(x=cntl.pH, y = change.pH, color = Thermo.mid.max)) + 
-  geom_point(aes(x=cntl.pH, y = change.pH, color = Thermo.mid.max), alpha = 0.4,size=3)  + 
-      stat_smooth(method=lm,se = FALSE,color='black')+ 
-    theme_bw()+
-  labs(x= 'pre-burn (control) pH',
-     #  y = 'Decay rate constant for fast C pool \nlog(k1)',
-       y = 'Change in post-burn pH') + 
-  facet_grid(burn.trtmt~horizon, scales = 'free_y',
-             labeller = labeller(horizon = HorizonLabels,
-                                                     burn.trtmt = BurnLabels))+
-  #scale_color_manual(values = c('black','slategray','tan3'),
-   #                  limits = c('control','wet','dry'),
-    #                 labels = c('control','wet soil','dry soil')) +
-  theme(axis.text.y = element_text(size = 14),
-        legend.title = element_text(size=14),
-        axis.text.x = element_text(face="italic",size = 14),
-        axis.title.x = element_text(size = 14, margin = margin(t=10, b=10)),
-        axis.title.y = element_text(size = 14, margin = margin(r=10, l=10)),
-        strip.text = element_text(size=14),
-        legend.text = element_text(size=14),
-        legend.position = 'right',
-       # legend.background = element_rect(fill = "darkgray"),
-        legend.box = "vertical") 
-
-
-pChange_pH
-
-
-df.meta.dry.O <- subset(df.meta, burn.trtmt == 'dry' & horizon == 'A')
-
-model <- lm(change.pH~cntl.pH, data = df.meta.dry.O)
-model
-summary(model)
-
-
-
-
-
-```
-
-
-# Scatterplot matrices to explore "severity"
-```{r}
-colnames(df.meta)
-
-my_colors <- c('red','orange','black')
-
-df1 <- df.meta %>%
-  subset(DNA.type =='gDNA' & incub.trtmt == 'pb') %>%
-  mutate(Frac.O.loss = (PRE.O.hor.thickness.cm - POST.O.hor.thickness.cm)/PRE.O.hor.thickness.cm) %>%
-  subset(select = c(burn.trtmt, 
-                    PRE.O.hor.thickness.cm,
-                    avg.sand,
-                    Thermo.mid.max,
-                    Thermo.low.max, 
-                    change.pH, 
-                    change.C.N.ratio,
-                    Mid.degree.C.hours,
-                    Low.degree.C.hours,
-                    Frac.core.dry.mass.loss,
-                    Frac.core.wet.mass.loss,
-                    hrzn.degree.hrs,
-                    Frac.O.loss))
-
-
-
-pairs.panels(df1[,c(2:3,8:10)], 
-      method = 'pearson',
-      hist.col = 'blue',
-      density = TRUE,
-      ellipses = TRUE,
-      col = my_colors[df1$burn.trtmt],
-      pch=19)
-
-
-pairs.panels(df1[,c(10,11,8,9)], 
-      method = 'pearson',
-      hist.col = 'blue',
-      density = TRUE,
-      ellipses = TRUE,
-      col = my_colors[df1$burn.trtmt],
-      pch=19)
-
-pairs(df1[,c(2,3,4,6,7,8,12,13)],
-      method = 'pearson',
-      col = my_colors[df1$burn.trtmt],
-      pch=19)
-
-
-df.meta <- df.meta %>%
-  mutate(Frac.O.loss = (PRE.O.hor.thickness.cm - POST.O.hor.thickness.cm)/PRE.O.hor.thickness.cm)
-
-p3 = ggplot(df.meta, aes(x=hrzn.degree.hrs,y=Frac.O.loss, color=burn.trtmt)) +
-  theme_bw()+
-  geom_point(size=3) + 
-  stat_smooth(method=lm,color='black') +
-  facet_grid(~Veg.type) 
-
-
-
-
-```
-
-
-# Comparing autoclave v. not decay model data:
-```{r}
-df.coefs <- subset(df.meta, incub.trtmt != 'SI' &
-                     incub.trtmt != 'pb')
-
-p1 = ggplot(df.coefs, aes(x=burn.trtmt)) + 
-  geom_boxplot(aes(y=(M1), fill=incub.trtmt, color=incub.trtmt), alpha = 0.5, varwidth = FALSE)+
-  #geom_boxplot(aes(y=log(M2), fill=burn.trtmt))+
-  theme_bw()+
-  labs(x= 'Dominant vegetation',
-     #  y = 'Decay rate constant for fast C pool \nlog(k1)',
-       y = 'Fractional size of fast C pool \n(M1)',
-       fill = 'Burn treatment',
-       color = 'Burn treatment') + 
-  facet_wrap(~Veg.type) +
-  theme(axis.text.y = element_text(size = 16),
-        legend.title = element_text(size=16),
-        axis.text.x = element_text(size = 16),
-        axis.title.x = element_text(size = 16, margin = margin(t=10, b=10)),
-        axis.title.y = element_text(size = 16, margin = margin(r=10, l=10)),
-        strip.text = element_text(size=16),
-        legend.text = element_text(size=16),
-       # legend.background = element_rect(fill = "darkgray"),
-        legend.box = "vertical")
-p1
-
-df.rsquared.5weeks <- read.csv('../data/2-pool-decay-model-output-5-weeks.csv')
-df.5weeks <- subset(df.rsquared.5weeks, t == 3)
-
-df.5weeks$incub.trtmt <- factor(df.5weeks$incub.trtmt, levels = c('SI','LIwA','LIn'))
-df.5weeks$burn.trtmt <- factor(df.5weeks$burn.trtmt, levels = c('control','wet','dry'))
-
-
-p1 = ggplot(df.5weeks, aes(x=burn.trtmt)) + 
-  geom_boxplot(aes(y=(M1), fill=incub.trtmt, color=incub.trtmt), alpha = 0.5, varwidth = FALSE)+
-  #geom_boxplot(aes(y=log(M2), fill=burn.trtmt))+
-  theme_bw()+
-  labs(y = 'Fractional size of fast C pool \n(M1)',
-       fill = 'Burn treatment',
-       color = 'Burn treatment') + 
-  theme(axis.text.y = element_text(size = 16),
-        legend.title = element_text(size=16),
-        axis.text.x = element_text(size = 16),
-        axis.title.x = element_text(size = 16, margin = margin(t=10, b=10)),
-        axis.title.y = element_text(size = 16, margin = margin(r=10, l=10)),
-        strip.text = element_text(size=16),
-        legend.text = element_text(size=16),
-       # legend.background = element_rect(fill = "darkgray"),
-        legend.box = "vertical")
-p1
-
-
-# Look at fractional C remaining at end of incubation:
-df.fracC <- read.csv("../data/fractional-c-remaining.csv", row.names = 1)
-
-df.veg <- subset(df.meta, select = c(site, Veg.type)) %>%
-  unique()
-
-df.fracC <- subset(df.fracC, DayFactor == 34) %>%
-  merge(df.veg, all = TRUE)
-
-
-df.fracC$incub.trtmt <- factor(df.fracC$incub.trtmt, levels = c('SI','LIwA','LIn'))
-df.fracC$burn.trtmt <- factor(df.fracC$burn.trtmt, levels = c('control','wet','dry'))
-
-p = ggplot(df.fracC, aes(x = burn.trtmt)) + 
-    geom_boxplot(aes(y=fractional.C.remaining, fill=incub.trtmt, color=incub.trtmt), alpha = 0.5, varwidth = FALSE)+
-  theme_bw()+
-  facet_wrap(~Veg.type)+
-  labs(fill = 'Burn treatment',
-       color = 'Burn treatment') + 
-  theme(axis.text.y = element_text(size = 16),
-        legend.title = element_text(size=16),
-        axis.text.x = element_text(size = 16),
-        axis.title.x = element_text(size = 16, margin = margin(t=10, b=10)),
-        axis.title.y = element_text(size = 16, margin = margin(r=10, l=10)),
-        strip.text = element_text(size=16),
-        legend.text = element_text(size=16),
-       # legend.background = element_rect(fill = "darkgray"),
-        legend.box = "vertical")
-
-
-```
-
-
-# ORDINATIONS - Comparing to unburned
-```{r}
-MyNMDS.pb.gDNA <- ordinate(ps.norm.pb.gDNA, method = 'NMDS', k=3, ddistance="unifrac", weighted=TRUE)
-MyNMDS.pb.cDNA <- ordinate(ps.norm.pb.cDNA, method = 'NMDS', k=3, ddistance="unifrac", weighted=TRUE)
-MyNMDS.SI <- ordinate(ps.norm.SI, method = 'NMDS', k=3, ddistance="unifrac", weighted=TRUE)
-
-MyNMDS.LI <- ordinate(ps.norm.LI, method = 'NMDS', k=3, ddistance="unifrac", weighted=TRUE)
-MyNMDS.LI
-
-ps.norm.LI.control <- prune_samples(sample_data(ps.norm.LI)$burn.trtmt %in% c('control'),ps.norm.LI)
-ps.norm.LI.control<- prune_taxa(taxa_sums(ps.norm.LI.control)>0, ps.norm.LI.control)
-
-ps.norm.LI.wet <- prune_samples(sample_data(ps.norm.LI)$burn.trtmt %in% c('wet'),ps.norm.LI)
-ps.norm.LI.wet<- prune_taxa(taxa_sums(ps.norm.LI.wet)>0, ps.norm.LI.wet)
-
-ps.norm.LI.dry <- prune_samples(sample_data(ps.norm.LI)$burn.trtmt %in% c('dry'),ps.norm.LI)
-ps.norm.LI.dry<- prune_taxa(taxa_sums(ps.norm.LI.dry)>0, ps.norm.LI.dry)
-
-
-MyNMDS.LI.control <- ordinate(ps.norm.LI.control, method = 'NMDS', k=3, ddistance="unifrac", weighted=TRUE)
-MyNMDS.LI.wet <- ordinate(ps.norm.LI.wet, method = 'NMDS', k=3, ddistance="unifrac", weighted=TRUE)
-MyNMDS.LI.dry <- ordinate(ps.norm.LI.dry, method = 'NMDS', k=3, ddistance="unifrac", weighted=TRUE)
-
-MyNMDS.LI.control
-MyNMDS.LI.wet
-MyNMDS.LI.dry
-
-p.LI.control = plot_ordination(ps.norm.LI.control, MyNMDS.LI.control,
-                               axes=c(1,3),shape = "incub.trtmt", color = 'horizon') +
-  geom_line(aes(group = core.id.hor)) +
-  theme_bw() +
-  geom_point(size=3)
-
-
-p.LI.wet = plot_ordination(ps.norm.LI.wet, MyNMDS.LI.wet, 
-                           axes = c(1,3),shape = "incub.trtmt", color = 'horizon') +  
-  geom_line(aes(group = core.id.hor)) +
-
-  theme_bw() +
-  geom_point(size=3)
-
-
-p.LI.dry = plot_ordination(ps.norm.LI.dry, MyNMDS.LI.dry, 
-                           axes=c(1,3),shape = "incub.trtmt", color = 'horizon') +
-    geom_line(aes(group = core.id.hor)) +
-  theme_bw() +
-  geom_point(size=3)
-
-
-cowplot::plot_grid(p.LI.control,p.LI.wet,p.LI.dry, ncol=3, labels = c('Control','Wet','Dry'))
-
-
-p.LI.axis1.2 = plot_ordination(ps.norm.LI, MyNMDS.LI, 
-                           axes=c(1,2),shape = "horizon", color = 'burn.trtmt') +
-    geom_line(aes(group = core.id.hor)) +
-  theme_bw() +
-  geom_point(size=3)
-p.LI.axis1.3 = plot_ordination(ps.norm.LI, MyNMDS.LI, 
-                           axes=c(1,3),shape = "horizon", color = 'burn.trtmt') +
-    geom_line(aes(group = core.id.hor)) +
-  theme_bw() +
-  geom_point(size=3)
-cowplot::plot_grid(p.LI.axis1.2,p.LI.axis1.3, ncol=2)
-
-
-
-p1 = plot_ordination(ps.norm.pb.gDNA, MyNMDS.pb.gDNA, axes = c(1,2),shape = "burn.trtmt", color = 'burn.trtmt') +
-  facet_wrap(~incub.trtmt) + theme_bw() +
-  geom_point(size=3)
-p2 = plot_ordination(ps.norm.pb.gDNA, MyNMDS.pb.gDNA, axes=c(1,3),shape = "burn.trtmt", color = 'burn.trtmt') +
-  facet_wrap(~incub.trtmt) + theme_bw() +
-  geom_point(size=3)
-p3 = plot_ordination(ps.norm.SI, MyNMDS.SI, axes = c(1,2),shape = "burn.trtmt", color = 'burn.trtmt') +
-  facet_wrap(~incub.trtmt) + theme_bw() +
-  geom_point(size=3)
-p4 = plot_ordination(ps.norm.SI, MyNMDS.SI, axes=c(1,3),shape = "burn.trtmt", color = 'burn.trtmt') +
-  facet_wrap(~incub.trtmt) + theme_bw() +
-  geom_point(size=3)
-p5 = plot_ordination(ps.norm.LIwA, MyNMDS.LIwA, axes = c(1,2),shape = "burn.trtmt", color = 'burn.trtmt') +
-  facet_wrap(~incub.trtmt) + theme_bw() +
-  geom_point(size=3)
-p6 = plot_ordination(ps.norm.LIwA, MyNMDS.LIwA, axes=c(1,3),shape = "burn.trtmt", color = 'burn.trtmt') +
-  facet_wrap(~incub.trtmt) + theme_bw() +
-  geom_point(size=3)
-
-# using cowplot to combine multiple figures.
-plot_grid(p1,p2,p3,p4,p5,p6,ncol=2)
-
-
-
-# Full ordination
-MyNMDS.full <- ordinate(ps.norm.gDNA, method = 'NMDS', k=3, ddistance="wunifrac", weighted=TRUE)
-
-
-ps.norm.pb <- prune_samples(sample_data(ps.norm.full)$incub.trtmt == 'pb', ps.norm.full)
-ps.norm.pb <- prune_taxa(taxa_sums(ps.norm.pb)>0, ps.norm.pb)
-MyNMDS.pb <- ordinate(ps.norm.pb, method = 'NMDS', k=3, ddistance="wunifrac", weighted=TRUE)
-
-
-sample_data(ps.norm.pb)$horizon = factor(sample_data(ps.norm.pb)$horizon, levels = c('O','A'))
-
-# Ordination plot with horizons and deg.hrs
-p1 = plot_ordination(ps.norm.pb, MyNMDS.pb, axes = c(1,2), 
-                      color = "burn.trtmt",
-                      shape = 'burn.trtmt') + 
-  facet_grid(horizon~DNA.type, labeller = labeller(horizon = HorizonLabels,
-                                                   DNA.type = DNALabels,
-                                                   incub.trtmt = IncubLabels))+
-  #facet_grid(~horizon, labeller = labeller(horizon = HorizonLabels))+
-  geom_point(size=3, alpha=0.8) +
-  labs(color = 'Burn treatment',
-       #color = expression("Degree ("*degree*C*") hours"), 
-       shape = 'Burn treatment') +
-  #scale_color_gradientn(colours = c('gold2','red','red4','black')) +
-  scale_color_manual(values = c('black','orange','red'),
-                     labels = c('control', 'wet soil burn','dry soil burn'),
-                     breaks = c('control','wet','dry'))+
-  scale_shape_manual(values = c('circle','square','triangle'),
-                     labels = c('control', 'wet soil burn','dry soil burn'),
-                     breaks = c('control','wet','dry')) +
-  #scale_shape_discrete(labels = c('Picea' = 'Picea spp.', 'Populus_tremuloides' = 'Populus tremuloides','Pinus_banksiana' = 'Pinus banksiana')) +
-  #scale_shape_manual(values = c('circle','triangle'),
-   #                  labels = c('O horizon','Mineral'),
-    #                 breaks = c('O','A')) + 
-  theme(legend.text = element_text(face = 'italic',size = 16),
-        axis.title = element_text(size=16),
-        axis.text = element_text(size=16),
-        legend.title = element_text(size=16)) + 
-  theme_bw()
-
-p1
-
-
-
-
-p2 = plot_ordination(ps.norm.gDNA, MyNMDS.full, axes = c(2,3), 
-                      color = "pH",
-                      shape = 'burn.trtmt') + 
-  facet_grid(horizon~incub.trtmt, labeller = labeller(horizon = HorizonLabels))+
-  #facet_grid(~horizon, labeller = labeller(horizon = HorizonLabels))+
-  geom_point(size=3, alpha=0.8) +
-  labs(color = 'post-burn pH',
-       #color = expression("Degree ("*degree*C*") hours"), 
-       shape = 'Burn treatment',
-       title = "Ch 4, p2: NMDS ordination on weighted unifrac dissimilarities \n All DNA samples; all timepoints") +
-  #scale_color_gradientn(colours = c('gold2','red','red4','black')) +
-  #scale_shape_manual(values = c('circle','square','triangle'),
-   #                  labels = c('control', 'wet soil burn','dry soil burn'),
-    #                 breaks = c('control','wet','dry')) +
-  #scale_shape_discrete(labels = c('Picea' = 'Picea spp.', 'Populus_tremuloides' = 'Populus tremuloides','Pinus_banksiana' = 'Pinus banksiana')) +
-  #scale_shape_manual(values = c('circle','triangle'),
-   #                  labels = c('O horizon','Mineral'),
-    #                 breaks = c('O','A')) + 
-  theme(legend.text = element_text(face = 'italic',size = 16),
-        axis.title = element_text(size=16),
-        axis.text = element_text(size=16),
-        legend.title = element_text(size=16)) + 
-  theme_bw()
-
-p2
-```
-
-# ORDINATIONS - Comparing SI to LIwA - inoculated burned soils look more like uninoculated burned 5-week samples
-```{r}
-ps.norm.SI.v.LIwA <- prune_samples(sample_data(ps.norm.full)$incub.trtmt %in% c('SI','LIwA'), ps.norm.full)
-
-ps.subset <- prune_samples(sample_data(ps.norm.SI.v.LIwA)$horizon == 'O' &
-                             sample_data(ps.norm.SI.v.LIwA)$burn.trtmt != 'wet',ps.norm.SI.v.LIwA)
-
-MyNMDS.inoculation <- ordinate(ps.subset, method = 'NMDS', k=3, ddistance="unifrac", weighted=TRUE)
-
-
-IncubLabels = c('5 weeks post-burn', 'Inoculated soils \n6 months post-burn')
-names(IncubLabels) = c('SI', 'LIwA')
-
-p.inoc = plot_ordination(ps.subset, MyNMDS.inoculation,
-                               axes=c(1,2),shape = "burn.trtmt", color='burn.trtmt') +
-  geom_point(size=2)+
-  geom_line(aes(group = site), color = 'grey60') +
-  facet_wrap(~incub.trtmt, labeller = labeller(incub.trtmt=IncubLabels))+
-  scale_color_manual(values = c('black','tan3'),
-                     limits = c('control','dry'),
-                     labels = c('Unburned \ncontrol','Dry soil')) +
-  scale_shape_manual(values = c('circle','triangle'),
-                     limits = c('control','dry'),
-                     labels = c('Unburned \ncontrol','Dry soil')) +
-  labs(shape = 'Burn treatment',
-       color = 'Burn treatment')+
-  theme_bw() +
-  geom_point(size=3)
-
-p.inoc
-```
-
-
-# Phylogenetic tree:
-```{r, message = FALSE}
-ps.traits <- phyloseq::prune_taxa(df.trait$OTU, ps.raw.full)
-
-
-AbunTaxa = taxa_names(filter_taxa(ps.norm.gDNA, function(x) mean(x) > 0.001, TRUE))
-
-length(AbunTaxa)
-ps.prune = prune_taxa(AbunTaxa, ps.raw.full)
-ps.prune
-
-ps.prune <- ps.raw.full %>%
-  subset_samples(burn.trtmt %in% c('dry'))
-  
-ps.prune <- prune_taxa(AbunTaxa, ps.prune)
-
-
-p = ggtree(ps.prune, aes(color=Phylum), 
-           branch.length = 'none',
-           layout = 'circular') + 
-  geom_treescale() + 
-  geom_tiplab2(size=2, aes(angle=angle))
-
-tree <- read.tree(file = '../../CombinedFireSim1519/tree/merged-exported-tree/tree.nwk')
-tree <- phy_tree(ps.prune)
-
-plot(tree, type = 'cladogram')
-
-# using cowplot to combine multiple figures.
-cowplot::plot_grid(p,p1, ncol=2, labels = c('A','B'))
-
-```
-
-# Number of responding OTUs for each experiment:
-```{r}
-df.full.OTU <- read.csv('../data/sequence-data/LibCombined/corncob-output/all-responders.csv')
-head(df.full.OTU)
-
-# Filter responders:
-df.full <- df.full.OTU %>%
-  subset(abs(Estimate) > 1) # removes 1500 non-unique OTUs
-dim(df.full)
-
-df.PB.pos.rspd <- subset(df.full, experiment == 'survival' & Estimate > 0) %>%
-  subset(Temp.cutoff %in% c('Low thermo greater than 50 C',
-                            'Mid thermo greater than 50 C')) %>%
-  group_by(OTU,horizon) %>%
-  mutate(max.Estimate = max(Estimate)) %>%
-  subset(max.Estimate == Estimate) %>%  
-  mutate(Response = 'positive') %>%
-  unique()
-
-df.PB.neg.rspd <- subset(df.full, experiment == 'survival' & Estimate < 0) %>%
-  subset(Temp.cutoff %in% c('Low thermo greater than 50 C',
-                            'Mid thermo greater than 50 C')) %>%
-  group_by(OTU, horizon) %>%
-  mutate(min.Estimate = min(Estimate)) %>%
-  subset(min.Estimate == Estimate) %>%
-  mutate(Response = 'negative') %>%
-  unique()
-
-
-summary(df.PB.pos.rspd$Estimate)
-length(unique(df.PB.pos.rspd$OTU))
-length(unique(df.PB.neg.rspd$OTU))
-
-
-
-df.SI.cntl.pos.rspd <- subset(df.full, experiment == 'fast growth' & Estimate > 0) %>%
-  subset(Comparison == 'pb.control.v.SI.control') %>%
-  group_by(OTU, horizon) %>%
-  mutate(max.Estimate = max(Estimate)) %>%
-  subset(max.Estimate == Estimate) %>%
-  unique()
-df.SI.cntl.neg.rspd <- subset(df.full, experiment == 'fast growth' & Estimate < 0) %>%
-  subset(Comparison == 'pb.control.v.SI.control') %>%
-  group_by(OTU, horizon) %>%
-  mutate(min.Estimate = min(Estimate)) %>%
-  subset(min.Estimate == Estimate) %>%
-  unique()
-
-
-
-df.SI.pos.rspd <- subset(df.full, experiment == 'fast growth' & Estimate > 0) %>%
-  subset(Temp.cutoff %in% c('Low thermo greater than 50 C',
-                            'Mid thermo greater than 50 C')) %>%
-  group_by(OTU, horizon) %>%
-  mutate(max.Estimate = max(Estimate)) %>%
-  subset(max.Estimate == Estimate) %>%
-  mutate(Response = 'positive') %>%
-  unique() %>% 
-  subset(!(OTU %in% df.SI.cntl.pos.rspd$OTU))
-length(unique(df.SI.pos.rspd$OTU))
-
-df.SI.neg.rspd <- subset(df.full, experiment == 'fast growth' & Estimate < 0) %>%
-  subset(Temp.cutoff %in% c('Low thermo greater than 50 C',
-                            'Mid thermo greater than 50 C')) %>%
-  group_by(OTU, horizon) %>%
-  mutate(min.Estimate = min(Estimate)) %>%
-  subset(min.Estimate == Estimate) %>%
-  unique() %>%
-  mutate(Response = 'negative') %>%
-  subset(!(OTU %in% df.SI.cntl.neg.rspd$OTU))
-
-length(unique(df.SI.neg.rspd$OTU))
-
-
-
-# LIwA:
-df.LIwA <- subset(df.full, experiment == 'affinity')
-
-df.LIwA.pos.rspd <- subset(df.full, experiment == 'affinity' & Estimate > 0) %>%
-  subset(Temp.cutoff %in% c('Low thermo greater than 50 C',
-                            'Mid thermo greater than 50 C')) %>%
-  group_by(OTU, horizon) %>%
-  mutate(max.Estimate = max(Estimate)) %>%
-  subset(max.Estimate == Estimate) %>%
-  mutate(Response = 'positive') %>%
-  unique() 
-length(unique(df.LIwA.pos.rspd$OTU))
-
-df.LIwA.neg.rspd <- subset(df.full, experiment == 'affinity' & Estimate < 0) %>%
-  subset(Temp.cutoff %in% c('Low thermo greater than 50 C',
-                            'Mid thermo greater than 50 C')) %>%
-  group_by(OTU,horizon) %>%
-  mutate(min.Estimate = min(Estimate)) %>%
-  subset(min.Estimate == Estimate) %>%
-  mutate(Response = 'negative') %>%
-  unique() 
-length(unique(df.LIwA.neg.rspd$OTU))
-
-
-df.responders <- rbind(df.PB.pos.rspd, df.PB.neg.rspd,
-                       df.SI.pos.rspd, df.SI.neg.rspd,
-                       df.LIwA.pos.rspd, df.LIwA.neg.rspd)
-head(df.responders)
-
-p = ggplot(subset(df.responders, Phylum == 'Firmicutes'), aes(x=Estimate, y = Genus, color = experiment)) + 
-  geom_point(size=2) + 
-  theme_bw() + 
-  facet_grid(horizon~experiment) + 
-  geom_vline(xintercept = 0)
-
-
-# Are fire survivors likely to be fast growing?
-length(df.PB.pos.rspd$OTU)
-dim(subset(df.PB.pos.rspd, OTU %in% df.SI.pos.rspd$OTU))
-# --> No not really. Of 19 fire survivors, only 2 are fast growing. 
-
-# Are fast growing taxa also survivors?
-length(unique(df.SI.pos.rspd$OTU))
-dim(subset(df.SI.pos.rspd, OTU %in% df.PB.pos.rspd$OTU)) 
-# --> No, of 98 OTUs identified as fast growing, only 2 were also identified as fire surviving.
-
-# Do fast growing taxa show post-fire affinity?
-length(unique(df.SI.pos.rspd$OTU))
-length(unique(subset(df.SI.pos.rspd, OTU %in% df.LIwA.pos.rspd$OTU))$OTU)
-length(unique(subset(df.SI.pos.rspd, OTU %in% df.LIwA.neg.rspd$OTU))$OTU)
-# --> 8 of 98 are positive+positive, 
-# --> 5 of 98 are positive+negative
-
-# Are positive affinity taxa also fire susceptible?
-length(df.LIwA.pos.rspd$OTU)
-dim(subset(df.LIwA.pos.rspd, OTU %in% df.PB.neg.rspd$OTU))
-# --> Nope. Only 1 of the positive affinity taxa was identified as fire susceptible.
-
-# Are positive affinity taxa also fast growers?
-length(df.LIwA.pos.rspd$OTU)
-dim(subset(df.LIwA.pos.rspd, OTU %in% df.SI.pos.rspd$OTU))
-# --> Not really, 7 of 53 positive affinity taxa identified as fast growing.
-
-# Are negative affinity taxa the same as slow growing taxa?
-length(df.LIwA.neg.rspd$OTU) 
-dim(subset(df.LIwA.neg.rspd, OTU %in% df.SI.neg.rspd$OTU))
-# Not really, 12 of 199 (10%) of negative affinity taxa were identified as slow growing.
-
-
-# DO fire survivors appear to have an affinity for post-fire environment?
-length(df.PB.pos.rspd$OTU)
-dim(subset(df.PB.pos.rspd, OTU %in% df.LIwA.pos.rspd$OTU))
-# --> Nope. 1 of 19
-
-# What about an anti-affinity?
-dim(subset(df.PB.pos.rspd, OTU %in% df.LIwA.neg.rspd$OTU))
-# --> Nop3. 2 of 19.
-```
-
-# Attempt at 3D plot
-```{r}
-# GRoup by Order
-ps.norm.gDNA <- ps.norm.gDNA %>%
-  tax_glom('Phylum') 
-
-df.norm.gDNA.Phylum <- psmelt(ps.norm.gDNA)
-
-
-df.Phylum.pb <- subset(df.norm.gDNA.Phylum, incub.trtmt == 'pb') %>%
-  group_by(Phylum, core.id.hor) %>%
-  mutate(mean.Abun.pb = mean(Abundance)) %>%
-  subset(select = c(Domain, Phylum, mean.Abun.pb, core.id.hor, burn.trtmt))
-
-df.Phylum.SI <- subset(df.norm.gDNA.Phylum, incub.trtmt == 'SI') %>%
-  group_by(Phylum, core.id.hor) %>%
-  mutate(mean.Abun.SI = mean(Abundance)) %>%
-  subset(select = c(Domain, Phylum, mean.Abun.SI, core.id.hor, burn.trtmt))
-
-df.Phylum.LIn <- subset(df.norm.gDNA.Phylum, incub.trtmt == 'LIn') %>%
-  group_by(Phylum, core.id.hor) %>%
-  mutate(mean.Abun.LIn = mean(Abundance)) %>%
-  subset(select = c(Domain, Phylum, mean.Abun.LIn, core.id.hor, burn.trtmt))
-
-df.Phylum.LIwA <- subset(df.norm.gDNA.Phylum, incub.trtmt == 'LIwA') %>%
-  group_by(Phylum, core.id.hor) %>%
-  mutate(mean.Abun.LIwA = mean(Abundance)) %>%
-  subset(select = c(Domain, Phylum, mean.Abun.LIwA, core.id.hor, burn.trtmt))
-
-df <- merge(df.Phylum.pb, df.Phylum.SI) %>%
-  merge(df.Phylum.LIn) %>%
-  merge(df.Phylum.LIwA) %>%
-  subset(mean.Abun.pb > 0.1 |
-           mean.Abun.SI > 0.1 |
-           mean.Abun.LIn > 0.1)
-
-# Plot
-p = ggplot(df, aes(x=mean.Abun.pb, 
-                   y=mean.Abun.SI, 
-                   color=Phylum, 
-                   shape = burn.trtmt,
-                   size = mean.Abun.LIn))+
-  geom_point() + 
-  #facet_wrap(~Phylum, scales = 'fixed') + 
-  ylim(0,1) + 
-  xlim(0,1)
-p
-
-cols <- c('red','orange','yellow','green','blue','purple','pink','black','grey10','grey20', 'forestgreen')
-
-df$color <- mycolors[as.numeric(df$Phylum)]
-
-# 3D plot with scatterplot3d - problems with coloring by variable
-with(df,
-     scatterplot3d(x = mean.Abun.pb, 
-                  y = mean.Abun.SI,
-                  z = mean.Abun.LIn))
-
-# 3D plot with rgl
-plot3d(
-  x=df$mean.Abun.pb, y=df$mean.Abun.SI, z=df$mean.Abun.LIn,
-  type = 's',
-  raidus = 0.1)
 ```
