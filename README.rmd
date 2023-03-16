@@ -23,3 +23,15 @@ OTU-trait-list.R - compiles list of OTUs identified as differentially enriched f
 Qiime-pipeline-for-FireSim2019-LibCombined.ipynb: steps for sequence processing and taxonomic assignments 
 
 rrndb-SI.R: Assigns mean predicted 16S copy numbers to OTUs based on taxonomy
+
+Combined_Lab_Field_OTU_table.csv: R dataframe of OTUs in the combined lab experiment/field datasets
+
+Combined_Lab_Field_sample_data.csv: R dataframe of sample names and metadata for the combined lab experiment/field datasets
+
+Combined_Lab_Field_tax_table.csv: R dataframe of taxonomy table for combined lab experiment/field datasets
+
+lab_OTU_table.csv: R dataframe of OTUs in the lab experiment datasets
+
+lab_sample_data.csv: R dataframe of sample names and metadata for the lab experiment datasets
+
+lab_taxonomy_table.csv: R dataframe of taxonomy for lab experiment datasets
