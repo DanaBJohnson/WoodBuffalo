@@ -35,7 +35,7 @@ Defaults = theme_bw(), black = O, "organic"; grey40 - M, "mineral"; shapes = cir
 
 # Metadata
 ```{r, include=FALSE}
-df.meta <- read.csv('../data/all-sample-metadata.csv')
+df.meta <- read.csv('../../data/all-sample-metadata.csv')
 
 df.meta <- subset(df.meta, core.id != '19UW-WB-11-02' &
                          Full.id != '19UW-WB-06-08-A-SI-duplicate' &
@@ -114,7 +114,7 @@ df.meta$burn.trtmt = factor(df.meta$burn.trtmt, levels = c('control','wet','dry'
 
 # Starting phyloseq:
 ### Normalized + tree
-ps.norm.full <- readRDS('../data/sequence-data/LibCombined/phyloseq-objects/ps.norm.full')
+ps.norm.full <- readRDS('../../data/sequence-data/LibCombined/phyloseq-objects/ps.norm.full')
 ps.norm.full <- prune_taxa(taxa_sums(ps.norm.full)>0, ps.norm.full)
 
 ps.norm.full <- prune_samples(sample_data(ps.norm.full)$Full.id != '19UW-WB-06-08-A-SI-duplicate' &
@@ -123,7 +123,7 @@ ps.norm.full <- prune_samples(sample_data(ps.norm.full)$Full.id != '19UW-WB-06-0
                     sample_data(ps.norm.full)$Full.id != '19UW-WB-19-07-A-SI-duplicate' &
                     sample_data(ps.norm.full)$Full.id != '19UW-WB-08-10-O-SI', ps.norm.full)
 
-ps.raw.full <- readRDS('../data/sequence-data/LibCombined/phyloseq-objects/ps.raw.full')
+ps.raw.full <- readRDS('../../data/sequence-data/LibCombined/phyloseq-objects/ps.raw.full')
 
 ps.raw.full <- prune_samples(sample_data(ps.raw.full)$Full.id != '19UW-WB-06-08-A-SI-duplicate' &
                     sample_data(ps.raw.full)$Full.id != '19UW-WB-07-02-O-SI-duplicate' &
@@ -166,46 +166,57 @@ ps.raw.cDNA <- prune_samples(sample_data(ps.raw.full)$DNA.type == 'cDNA', ps.raw
 # Figure 2 (burn temperature, pH and C:N change, respiration coefficients):
 ```{r}
 # Temperatures ----
-df.Temp <-read.csv('../data/burn-thermocouple-temp-logs/Temp-all-burns-clean.csv')
+df.Temp <-read.csv('../../data/burn-thermocouple-temp-logs/Temp-all-burns-clean.csv')
 df.Temp$Thermo_position <- factor(df.Temp$Thermo_position, levels = c('Mid','Low'))
 
 pTemp = ggplot(df.Temp, aes(x = time_hr, 
                           y = Temp)) + 
-  geom_point(aes(color = Thermo_position), size=1) +
+  geom_point(aes(color = burn.trtmt), size=1) +
   theme_bw()+
-  facet_grid(burn.trtmt~Thermo_position,scales = 'free_y', 
+  facet_wrap(~Thermo_position,scales = 'free_y', ncol=1,
              labeller = labeller(Thermo_position = ThermoLabels,
                                  burn.trtmt = BurnLabels)) +
   labs(x = "Time (h)",
-       y = expression(paste("Temperature ( ",degree ~ C, ")")),
-       color = "Soil depth") + 
-  scale_color_manual(values = c('black','grey40'),
-                     labels = c('O horizon/mineral \n interface','9 cm'),
-                     breaks = c('Mid','Low')) + 
-  theme(axis.title.x = element_text(size = 16),
-        axis.title.y = element_text(size = 16),
-        axis.text = element_text(size=16),
-        strip.text.y = element_text(size=16), 
-        strip.text.x = element_text(size=16), 
-        legend.text = element_text(size=16),
-        legend.title = element_text(size=16), 
-        legend.position = '',
-       strip.background = element_rect(colour="black", fill="grey92")) 
+       y = expression(paste("Thermocouple temperature ( ",degree ~ C, ")")),
+       color = "Burn treatment") + 
+  #scale_color_manual(values = c("black","grey70"),
+   #                  labels = c('O horizon/mineral \n interface','9 cm'),
+    #                 breaks = c('wet','dry')) + 
+  scale_color_manual(values = c('orange','red'),
+                     limits = c('wet','dry'),
+                     labels = c('Moist soil burn','Dry soil burn')) +
+  theme(axis.title.x = element_text(size = 14),
+        axis.title.y = element_text(size = 14),
+        axis.text = element_text(size=14),
+        strip.text.y = element_text(size=14), 
+        strip.text.x = element_text(size=14), 
+        legend.text = element_text(size=12),
+        legend.title = element_text(size=12), 
+        legend.position = 'right',
+       strip.background = element_rect(colour="black", fill="grey92")) +
+  geom_hline(yintercept=100)
 pTemp
 
 # pH and C:N change ----
 pChange_pH <- ggplot(subset(df.meta, incub.trtmt == 'SI')) + 
-  geom_boxplot(aes(x=burn.trtmt, y = pH, fill = horizon), alpha = 0.7, varwidth = FALSE) + 
+  geom_boxplot(aes(x=horizon, y = pH, fill = burn.trtmt), varwidth = FALSE) + 
     theme_bw()+
-  labs(x= 'Burn treatment',
+  labs(x= 'Soil horizon',
      #  y = 'Decay rate constant for fast C pool \nlog(k1)',
        y = 'Soil pH',
-       fill = 'Soil horizon') + 
-  scale_fill_manual(values = c('black','grey40'),
-                     limits = c('O','A'),
+       fill = 'Burn treatment') + 
+  scale_fill_manual(values = c('grey50','orange','red'),
+                     limits = c('control','wet','dry'),
+                     labels = c('Unburned\ncontrol','Moist soil\nburn','Dry soil\nburn')) +
+  scale_x_discrete(limits = c('O','A'),
                      labels = c('Organic','Mineral')) +
-  scale_x_discrete(limits = c('control','wet','dry'),
-                     labels = c('Unburned\ncontrol','Wet soil\nburn','Dry soil\nburn')) +
+  #scale_fill_manual(values = c("deepskyblue3","saddlebrown"),
+  # scale_fill_manual(values = c("slateblue4","palegreen3"),
+  # #scale_fill_manual(values = c("darkgreen","saddlebrown"),
+  #                    limits = c('O','A'),
+  #                    labels = c('Organic','Mineral')) +
+  # scale_x_discrete(limits = c('control','wet','dry'),
+  #                    labels = c('Unburned\ncontrol','Wet soil\nburn','Dry soil\nburn')) +
   theme(axis.text.y = element_text(size = 14),
         legend.title = element_text(size=14),
         axis.text.x = element_text(size = 14),
@@ -218,34 +229,55 @@ pChange_pH <- ggplot(subset(df.meta, incub.trtmt == 'SI')) +
         legend.box = "vertical")
 
 
-pChange_CN  <- ggplot(subset(df.meta, incub.trtmt == 'SI')) + 
-  geom_boxplot(aes(x=burn.trtmt, y = C.N.ratio, fill = horizon), alpha = 0.7, varwidth = FALSE) + 
+pChange_CN  <- ggplot(subset(df.meta, incub.trtmt == 'SI' &site !=10)) + 
+  geom_boxplot(aes(x=horizon, y = C.N.ratio, fill = burn.trtmt), varwidth = FALSE) + 
     theme_bw()+
-  labs(x= 'Burn treatment',
+  labs(x= 'Soil horizon',
      #  y = 'Decay rate constant for fast C pool \nlog(k1)',
        y = 'Soil C:N',
-       fill = 'Soil horizon') + 
-  scale_fill_manual(values = c('black','grey40'),
-                     limits = c('O','A'),
+       fill = 'Burn treatment') + 
+  scale_fill_manual(values = c('grey50','orange','red'),
+                     limits = c('control','wet','dry'),
+                     labels = c('Unburned\ncontrol','Moist soil\nburn','Dry soil\nburn')) +
+  scale_x_discrete(limits = c('O','A'),
                      labels = c('Organic','Mineral')) +
-  scale_x_discrete(limits = c('control','wet','dry'),
-                     labels = c('Unburned\ncontrol','Wet soil\nburn','Dry soil\nburn')) +
+  #scale_fill_manual(values = c("deepskyblue3","saddlebrown"),
+  # scale_fill_manual(values = c("slateblue4","palegreen3"),
+  # #scale_fill_manual(values = c("darkgreen","saddlebrown"),
+  #                    limits = c('O','A'),
+  #                    labels = c('Organic','Mineral')) +
+  # scale_x_discrete(limits = c('control','wet','dry'),
+  #                    labels = c('Unburned\ncontrol','Wet soil\nburn','Dry soil\nburn')) +
   theme(axis.text.y = element_text(size = 14),
-        legend.title = element_text(size=14),
+        legend.title = element_text(size=12),
         axis.text.x = element_text(size = 14),
         axis.title.x = element_text(size = 14, margin = margin(t=10, b=10)),
         axis.title.y = element_text(size = 14, margin = margin(r=10, l=10)),
         strip.text = element_text(size=14),
-        legend.text = element_text(size=14),
+        legend.text = element_text(size=12),
         legend.position = '',
        # legend.background = element_rect(fill = "darkgray"),
         legend.box = "vertical")
 
 cowplot::plot_grid(pChange_pH, pChange_CN, ncol=2)
 
+# Stats ----
+df.stats <- subset(df.meta, incub.trtmt == 'SI' )
+
+test = aov(C.N.ratio ~ burn.trtmt*horizon, subset(df.stats))
+summary(test)
+TukeyHSD(test)
+
+
+
+
 # Respiration coefficients ----
-df.coefs <- subset(df.meta, incub.trtmt == 'LIwA' &
-                     horizon == 'O' & texture != 'organic')
+#   Decay model coefficients at end of 5 week incubation (Days=34)
+#   after adjusting for total C
+df.coefs <- read.csv('../../data/2-pool-decay-model-output-SI-adjusted-for-total-C.csv') %>%
+  subset(t==34) 
+# df.coefs <- read.csv('../../data/2-pool-decay-model-output-LIwA-adjusted-for-total-C.csv') %>%
+#   subset(t==180)
 
 df.stack <- gather(df.coefs, 
                    key = 'coefs', 
@@ -254,7 +286,7 @@ df.stack <- gather(df.coefs,
 df.stack$coefs <- factor(df.stack$coefs, levels = c('M1', 'M2', 'k1', 'k2'))
 
 pResp2 = ggplot(subset(df.stack, coefs %in% c('M1','M2')), aes(x=burn.trtmt)) + 
-  geom_boxplot(aes(y=value), fill='grey70', alpha=0.7,varwidth = FALSE)+
+  geom_boxplot(aes(y=value, fill=burn.trtmt),varwidth = FALSE)+
   #geom_boxplot(aes(y=log(M2), fill=burn.trtmt))+
   theme_bw()+
   labs(x= 'Burn treatment',
@@ -262,22 +294,22 @@ pResp2 = ggplot(subset(df.stack, coefs %in% c('M1','M2')), aes(x=burn.trtmt)) +
        y = 'Fractional pool size',
        fill = 'Burn treatment',
        color = 'Burn treatment') + 
-  scale_fill_manual(values = c('black','slategray3','tan3'),
-                     limits = c('control','wet','dry'),
-                     labels = c('control','wet soil','dry soil')) +
-  scale_x_discrete(limits = c('control','wet','dry'),
-                     labels = c('Unburned\ncontrol','Wet soil\nburn','Dry soil\nburn')) +
+  scale_fill_manual(values = c('grey50','orange','red'),
+                     limits = c('control','wet burn','dry burn'),
+                     labels = c('Unburned\ncontrol','Moist soil\nburn','Dry soil\nburn')) +
+  scale_x_discrete(limits = c('control','wet burn','dry burn'),
+                     labels = c('Unburned\ncontrol','Moist soil\nburn','Dry soil\nburn')) +
   #scale_x_discrete(limits = c('O','A'), 
   #                 labels = c('Organic','Mineral'))
   facet_wrap(~coefs, ncol=1,scales = 'free_y',
              labeller = labeller(coefs = CoefsLabel))+
-  theme(axis.text.y = element_text(size = 14),
-        legend.title = element_text(size=14),
-        axis.text.x = element_text(size = 14),
-        axis.title.x = element_text(size = 14, margin = margin(t=10, b=10)),
+  theme(axis.text.y = element_text(size = 12),
+        legend.title = element_text(size=12),
+        axis.text.x = element_text(size = 12),
+        axis.title.x = element_text(size = 12, margin = margin(t=10, b=10)),
         axis.title.y = element_text(size = 14, margin = margin(r=25, l=10)),
-        strip.text = element_text(size=14),
-        legend.text = element_text(size=14),
+        strip.text = element_text(size=12),
+        legend.text = element_text(size=12),
        # legend.background = element_rect(fill = "darkgray"),
         legend.box = "vertical", 
        legend.position = '',
@@ -285,7 +317,7 @@ pResp2 = ggplot(subset(df.stack, coefs %in% c('M1','M2')), aes(x=burn.trtmt)) +
 
 
 pResp1 = ggplot(subset(df.stack, coefs %in% c('k1','k2')), aes(x=burn.trtmt)) + 
-  geom_boxplot(aes(y=value), fill='grey70', alpha=0.7,varwidth = FALSE)+
+  geom_boxplot(aes(y=value, fill=burn.trtmt),varwidth = FALSE)+
   #geom_boxplot(aes(y=log(M2), fill=burn.trtmt))+
   theme_bw()+
   labs(x= 'Burn treatment',
@@ -293,21 +325,21 @@ pResp1 = ggplot(subset(df.stack, coefs %in% c('k1','k2')), aes(x=burn.trtmt)) +
        y = 'Decay rate',
        fill = 'Burn treatment',
        color = 'Burn treatment') + 
-  scale_fill_manual(values = c('black','slategray3','tan3'),
-                     limits = c('control','wet','dry'),
-                     labels = c('control','wet soil','dry soil')) +
-  scale_x_discrete(limits = c('control','wet','dry'),
-                     labels = c('Unburned\ncontrol','Wet soil\nburn','Dry soil\nburn')) +
+  scale_fill_manual(values = c('grey50','orange','red'),
+                     limits = c('control','wet burn','dry burn'),
+                     labels = c('Unburned\ncontrol','Moist soil\nburn','Dry soil\nburn')) +
+  scale_x_discrete(limits = c('control','wet burn','dry burn'),
+                     labels = c('Unburned\ncontrol','Moist soil\nburn','Dry soil\nburn')) +
   #scale_x_discrete(limits = c('O','A'), 
   #                 labels = c('Organic','Mineral'))
   facet_wrap(~coefs, ncol=1,scales = 'free_y',
              labeller = labeller(coefs = CoefsLabel))+
-  theme(axis.text.y = element_text(size = 14),
-        legend.title = element_text(size=14),
-        axis.text.x = element_text(size = 14),
-        axis.title.x = element_text(size = 14, margin = margin(t=10, b=10)),
+  theme(axis.text.y = element_text(size = 12),
+        legend.title = element_text(size=12),
+        axis.text.x = element_text(size = 12),
+        axis.title.x = element_text(size = 12, margin = margin(t=10, b=10)),
         axis.title.y = element_text(size = 14, margin = margin(r=10, l=10)),
-        strip.text = element_text(size=14),
+        strip.text = element_text(size=12),
         legend.text = element_text(size=14),
        # legend.background = element_rect(fill = "darkgray"),
         legend.box = "vertical", 
@@ -315,7 +347,7 @@ pResp1 = ggplot(subset(df.stack, coefs %in% c('k1','k2')), aes(x=burn.trtmt)) +
        strip.background = element_rect(colour="black", fill="grey92"))
 
 
-cowplot::plot_grid(pResp2, pResp1, ncol=1)
+cowplot::plot_grid(pResp2, pResp1, ncol=2)
 
 # Stats ----
 df.stats <- subset(df.meta, incub.trtmt != 'pb' & horizon == 'O')
@@ -348,7 +380,7 @@ p = ggplot(df.stats, aes(x=burn.trtmt, y =k1)) +
 
 # Figure 3: RNA and DNA concentration (ng/g soil)
 ```{r}
-df <- read.csv('../data/raw-data/pb-RNA-and-DNA-conc.csv')
+df <- read.csv('../../data/raw-data/pb-RNA-and-DNA-conc.csv')
 
 colnames(df)[1] <- 'core.id.hor.incub'
 
@@ -370,18 +402,23 @@ names(NaLabels) <- c('cDNA','gDNA')
 
 
 p1 = ggplot(df) + 
-  geom_boxplot(aes(x=burn.trtmt, y = nucleic.acid.conc.in.soil.ng.per.g/1000, fill = horizon),alpha = 0.7, varwidth = FALSE) + 
+  geom_boxplot(aes(x=horizon, y = nucleic.acid.conc.in.soil.ng.per.g/1000, fill = burn.trtmt),varwidth = FALSE) + 
   theme_bw()+
   facet_wrap(~DNA.type, ncol=2, labeller = labeller(DNA.type = NaLabels))+
-  labs(x= 'Burn treatment',
+  labs(x= 'Soil horizon',
        #  y = 'Decay rate constant for fast C pool \nlog(k1)',
-       y = 'Concentration (ug/g soil)',
-       fill = 'Soil horizon') + 
-  scale_fill_manual(values = c('black','grey40'),
-                    limits = c('O','A'),
-                    labels = c('Organic','Mineral')) +
-  scale_x_discrete(limits = c('control','wet','dry'),
-                   labels = c('Unburned\ncontrol','Wet soil\nburn','Dry soil\nburn')) +
+       y = 'Concentration\n(ug/g soil)',
+       fill = 'Burn treatment') + 
+  scale_fill_manual(values = c('grey50','orange','red'),
+                     limits = c('control','wet','dry'),
+                     labels = c('Unburned\ncontrol','Moist soil\nburn','Dry soil\nburn')) +
+  scale_x_discrete(limits = c('O','A'),
+                     labels = c('Organic','Mineral')) +
+  # scale_fill_manual(values = c("darkgreen","grey70"),
+  #                   limits = c('O','A'),
+  #                   labels = c('Organic','Mineral')) +
+  # scale_x_discrete(limits = c('control','wet','dry'),
+  #                  labels = c('Unburned\ncontrol','Moist soil\nburn','Dry soil\nburn')) +
   theme(axis.text.y = element_text(size = 14),
         legend.title = element_text(size=14),
         axis.text.x = element_text(size = 13),
@@ -389,12 +426,71 @@ p1 = ggplot(df) +
         axis.title.y = element_text(size = 14, margin = margin(r=10, l=10)),
         strip.text = element_text(size=14),
         legend.text = element_text(size=14),
-        legend.position = 'right',
+        legend.position = '',
         # legend.background = element_rect(fill = "darkgray"),
         legend.box = "vertical")
 p1
 
-test <- aov(nucleic.acid.conc.in.soil.ng.per.g ~ burn.trtmt, data = subset(df, DNA.type == 'cDNA' & horizon == 'O' & burn.trtmt != 'wet'))
+p_DNA = ggplot(subset(df, DNA.type == 'gDNA')) + 
+  geom_boxplot(aes(x=horizon, y = nucleic.acid.conc.in.soil.ng.per.g/1000, fill = burn.trtmt),varwidth = FALSE) + 
+  theme_bw()+
+  labs(x= 'Soil horizon',
+       #  y = 'Decay rate constant for fast C pool \nlog(k1)',
+       y = 'DNA concentration\n(ug/g soil)',
+       fill = 'Burn treatment') + 
+  scale_fill_manual(values = c('grey50','orange','red'),
+                     limits = c('control','wet','dry'),
+                     labels = c('Unburned\ncontrol','Moist soil\nburn','Dry soil\nburn')) +
+  scale_x_discrete(limits = c('O','A'),
+                     labels = c('Organic','Mineral')) +
+  # scale_fill_manual(values = c("darkgreen","grey70"),
+  #                   limits = c('O','A'),
+  #                   labels = c('Organic','Mineral')) +
+  # scale_x_discrete(limits = c('control','wet','dry'),
+  #                  labels = c('Unburned\ncontrol','Moist soil\nburn','Dry soil\nburn')) +
+  theme(axis.text.y = element_text(size = 14),
+        legend.title = element_text(size=14),
+        axis.text.x = element_text(size = 13),
+        axis.title.x = element_text(size = 14, margin = margin(t=10, b=10)),
+        axis.title.y = element_text(size = 14, margin = margin(r=10, l=10)),
+        strip.text = element_text(size=14),
+        legend.text = element_text(size=14),
+        legend.position = '',
+        # legend.background = element_rect(fill = "darkgray"),
+        legend.box = "vertical")
+
+p_RNA = ggplot(subset(df, DNA.type == 'cDNA')) + 
+  geom_boxplot(aes(x=horizon, y = nucleic.acid.conc.in.soil.ng.per.g/1000, fill = burn.trtmt),varwidth = FALSE) + 
+  theme_bw()+
+  labs(x= 'Soil horizon',
+       #  y = 'Decay rate constant for fast C pool \nlog(k1)',
+       y = 'RNA concentration\n(ug/g soil)',
+       fill = 'Burn treatment') + 
+  scale_fill_manual(values = c('grey50','orange','red'),
+                     limits = c('control','wet','dry'),
+                     labels = c('Unburned control','Moist soil burn','Dry soil burn')) +
+  scale_x_discrete(limits = c('O','A'),
+                     labels = c('Organic','Mineral')) +
+  # scale_fill_manual(values = c("darkgreen","grey70"),
+  #                   limits = c('O','A'),
+  #                   labels = c('Organic','Mineral')) +
+  # scale_x_discrete(limits = c('control','wet','dry'),
+  #                  labels = c('Unburned\ncontrol','Moist soil\nburn','Dry soil\nburn')) +
+  theme(axis.text.y = element_text(size = 14),
+        legend.title = element_text(size=14),
+        axis.text.x = element_text(size = 13),
+        axis.title.x = element_text(size = 14, margin = margin(t=10, b=10)),
+        axis.title.y = element_text(size = 14, margin = margin(r=10, l=10)),
+        strip.text = element_text(size=14),
+        legend.text = element_text(size=14),
+        legend.position = '',
+        # legend.background = element_rect(fill = "darkgray"),
+        legend.box = "vertical")
+
+cowplot::plot_grid(p_DNA, p_RNA, ncol=2)
+
+
+test <- aov(nucleic.acid.conc.in.soil.ng.per.g ~ burn.trtmt*horizon, data = subset(df, DNA.type == 'gDNA'))
 summary(test)
 TukeyHSD(test)
 
@@ -523,7 +619,7 @@ p=ggplot(subset(df.distances, DNA.type == 'cDNA')) +
                      limits = c('O','A'),
                      labels = c('Organic','Mineral')) +
   scale_x_discrete(limits = c('wet','dry'),
-                   labels = c('Wet soil \nburn','Dry soil \nburn')) +
+                   labels = c('Moist soil \nburn','Dry soil \nburn')) +
   theme(axis.title = element_text(size=18),
         axis.text = element_text(size=18),
         legend.title = element_text(size=18),
@@ -809,9 +905,9 @@ df.norm.ratios$RNA.DNA.ratio = df.norm.ratios$RNA.abundance/df.norm.ratios$DNA.a
 # Figure 4 - weighted mean gene copy number
 Which bacteria are fast-growing following burn treatments of varying severity and under a range of moisture conditions?
 ```{r}
-df.WMCN.pb <- read.csv('../data/WtMeanCopyNum_pb_gDNA.csv')
-df.WMCN.SI <- read.csv('../data/WtMeanCopyNum_SI.csv')
-df.WMCN.LIwA <- read.csv('../data/WtMeanCopyNum_LIwA.csv')
+df.WMCN.pb <- read.csv('../../data/WtMeanCopyNum_pb_gDNA.csv')
+df.WMCN.SI <- read.csv('../../data/WtMeanCopyNum_SI.csv')
+df.WMCN.LIwA <- read.csv('../../data/WtMeanCopyNum_LIwA.csv')
 
 df.WMCN.SI <- subset(df.WMCN.SI, core.id != '19UW-WB-11-02' & 
                     Full.id != '19UW-WB-06-08-A-SI-duplicate' &
@@ -854,11 +950,11 @@ p1 = ggplot(data = subset(df.WMCN, incub.trtmt != 'LIwA')) +
   geom_boxplot(aes(x=burn.trtmt, y=WtMeanCopyNum, fill=horizon),alpha=0.7)+
   facet_wrap(~incub.trtmt, labeller = labeller(incub.trtmt = IncubLabels))+
   theme_bw() + 
-  scale_fill_manual(values = c('black','grey50'),
+  scale_fill_manual(values = c("darkgreen","grey70"),
                      labels = c('Organic','Mineral'),
                      limits = c('O','A'))+
   scale_x_discrete(limits = c('control','wet','dry'),
-                     labels = c('Unburned\ncontrol','Wet soil\nburn','Dry soil\nburn')) +
+                     labels = c('Unburned\ncontrol','Moist soil\nburn','Dry soil\nburn')) +
   labs(x='Burn treatment',
        y='Weighted mean predicted \n16S rRNA gene copy number',
        fill = 'Soil horizon') +
@@ -924,12 +1020,12 @@ TukeyHSD(test)
 
 
 # Compare copy number of positive/negative responders: ----
-df.full.OTU <- read.csv('../data/sequence-data/LibCombined/corncob-output/all-responders.csv')
-RDP <- read.csv('../data/All-OTUs-CopyNum.csv')
+df.full.OTU <- read.csv('../../data/sequence-data/LibCombined/corncob-output/Manuscript/Trait-responder-OTUs.csv')
+RDP <- read.csv('../../data/All-OTUs-CopyNum.csv')
 
 
 
-df.fast <- subset(df.full, experiment == 'fast growth' &
+df.fast <- subset(df.full.OTU, experiment == 'fast growth' &
                         Estimate > (mean(Estimate)-1*sd(Estimate))) %>%
   mutate(fast.est = Estimate)%>%
   dplyr::group_by(OTU) %>%
@@ -1022,7 +1118,7 @@ p = ggplot(subset(df.SI.dry.responders, is.na(CopyNum) == FALSE), aes(x=Estimate
 
 # Figure 5 - Calculate bray-curtis dissimilarity for autoclaving
 ```{r, message = FALSE}
-df.distances <- read.csv('../data/bray-curtis-dissimilarites.csv')
+df.distances <- read.csv('../../data/bray-curtis-dissimilarites.csv')
 
 df.distances <- merge(df.distances, subset(df.meta, burn.trtmt != 'control'))    
 
@@ -1042,7 +1138,7 @@ p3=ggplot(subset(df.distances, incub.trtmt == 'LIwA' & burn.trtmt == 'dry'),
        y = 'Bray-Curtis dissimilarity \ncompared to control', 
        color = 'Soil horizon',
        shape = 'Soil horizon') + 
-  scale_color_manual(values = c('black', 'grey40'),
+  scale_color_manual(values = c("darkgreen","grey70"),
                      limits = c('O','A'),
                      labels = c('Organic','Mineral')) +
   scale_shape_manual(values = c('circle','triangle'),
@@ -1095,6 +1191,244 @@ test <- aov(BC.distance.btw.burned.and.control ~ hrzn.degree.hrs,
             data = subset(df.meta.combined,incub.trtmt == 'pb' & DNA.type == 'cDNA' &burn.trtmt == 'wet'))
 summary(test) 
 ```
+
+
+# Responders as fraction of total reads
+```{r}
+df <- read.csv('../../data/sequence-data/LibCombined/corncob-output/Manuscript/Trait-responder-OTUs.csv')
+
+ps.responders <- prune_taxa(taxa_names(ps.norm.full) %in% df$OTU, ps.norm.full)
+
+df.melt <- psmelt(ps.responders)
+
+responders <- df.melt %>% group_by(Sample) %>% summarize(Abundance) 
+max(responders$Abundance)
+mean(responders$Abundance)
+
+dry <- subset(df.melt, burn.trtmt == 'dry') %>% subset(select = c(Sample, horizon, burn.trtmt, Abundance, incub.trtmt, Thermo.mid.max)) %>% group_by(Sample) %>% mutate(total.Abun = sum(Abundance))
+
+summary(dry)
+
+# Total gDNA reads in lab experiments: 39115
+# Total reads in lab experiments: 43450
+# Number responders = 117
+# max abundance in lab data = 60%
+# mean abundance, dry burns = 0.15% +/- 14%
+
+
+df.frac.of.total <- df.melt %>% subset(select = c(Sample, horizon, burn.trtmt, Veg.type, Abundance, DNA.type, incub.trtmt, Thermo.mid.max, site)) %>% group_by(Sample) %>% mutate(total.Abun = sum(Abundance))
+
+
+p_FractionTotal <- ggplot(subset(df.frac.of.total, DNA.type == 'cDNA'), aes(x=site, y=total.Abun, fill=burn.trtmt)) +
+  geom_bar(stat='identity',  position='dodge') + 
+  facet_wrap(~horizon+incub.trtmt, labeller = labeller(horizon = HorizonLabels)) + 
+  theme_bw()+
+  labs(x= 'Sampling site ID',
+     #  y = 'Decay rate constant for fast C pool \nlog(k1)',
+       y = 'Fraction of total reads',
+       fill = 'Burn treatment') + 
+  scale_fill_manual(values = c('grey50','orange','red'),
+                     limits = c('control','wet','dry'),
+                     labels = c('Unburned\ncontrol','Moist soil\nburn','Dry soil\nburn')) +
+  theme(axis.text.y = element_text(size = 14),
+        legend.title = element_text(size=14),
+        axis.text.x = element_text(size = 14),
+        axis.title.x = element_text(size = 14, margin = margin(t=10, b=10)),
+        axis.title.y = element_text(size = 14, margin = margin(r=10, l=10)),
+        strip.text = element_text(size=14),
+        legend.text = element_text(size=14),
+        legend.position = '',
+       # legend.background = element_rect(fill = "darkgray"),
+        legend.box = "vertical")
+
+df.frac.of.total$burn.trtmt <- factor(df.frac.of.total$burn.trtmt, levels = c('control','wet','dry'))
+
+p_FractionTotal <- ggplot(subset(df.frac.of.total,incub.trtmt!='LIn'), aes(x=horizon, y=total.Abun, fill=burn.trtmt)) +
+  geom_boxplot()+
+  facet_wrap(~incub.trtmt+DNA.type, labeller = labeller(incub.trtmt = IncubLabels, DNA.type = DNALabels)) + 
+  theme_bw()+
+  labs(x= 'Soil horizon',
+     #  y = 'Decay rate constant for fast C pool \nlog(k1)',
+       y = 'Fraction of total reads',
+       fill = 'Burn treatment') + 
+  scale_fill_manual(values = c('grey50','orange','red'),
+                     limits = c('control','wet','dry'),
+                     labels = c('Unburned\ncontrol','Moist soil\nburn','Dry soil\nburn')) +
+    scale_x_discrete(limits = c('O','A'),
+                     labels = c('Organic','Mineral')) +
+  theme(axis.text.y = element_text(size = 14),
+        legend.title = element_text(size=14),
+        axis.text.x = element_text(size = 14),
+        axis.title.x = element_text(size = 14, margin = margin(t=10, b=10)),
+        axis.title.y = element_text(size = 14, margin = margin(r=10, l=10)),
+        strip.text = element_text(size=14),
+        legend.text = element_text(size=14),
+        legend.position = '',
+       # legend.background = element_rect(fill = "darkgray"),
+        legend.box = "vertical")
+
+
+
+# Table summarize composition of responders by phylum:
+df.phylum <- subset(df, select = c(mu.survival.max, mu.fast.max, mu.affinity.max, Phylum)) %>% unique()
+
+df.phylum %>% mutate(Phylum = as.factor(Phylum)) %>% subset(mu.affinity.max>0) %>%subset(select = c(Phylum)) %>% View()
+
+df.Class <- subset(df, select = c(mu.survival.max, mu.fast.max, mu.affinity.max, Class)) %>% unique()
+
+df.Class %>% mutate(Class = as.factor(Class)) %>% subset(mu.fast.max>0) %>%subset(select = c(Class)) %>% summary()
+
+
+
+# Count number of taxa by sample:
+# Create a factor corresponding to the Genera
+genfac = factor(tax_table(ps.norm.cDNA)[, "Genus"])
+# Tabulate the counts for each genera in each sample
+gentab = apply(otu_table(ps.norm.cDNA), MARGIN = 2, function(x) {
+    tapply(x, INDEX = genfac, FUN = sum, na.rm = TRUE, simplify = TRUE)
+})
+head(gentab)[, 1:10]
+
+x <- as.data.frame(gentab)
+```
+
+# New figures: 
+```{r}
+### BC dissim of burned vs. unburned on the x axis with a respiration metric on the y axis
+
+# Import BC dissimilarity data
+df.distances <- read.csv('../../data/bray-curtis-dissimilarites.csv')
+
+# Combine this with metadata
+df.distances <- merge(df.distances, subset(df.meta, burn.trtmt != 'control'))    
+
+# Organize
+df.distances$incub.trtmt <- factor(df.distances$incub.trtmt, levels = c('pb','SI','LIwA','LIn'))
+df.distances$horizon <- factor(df.distances$horizon, levels = c('O','A')) 
+ 
+
+# Import respiration data:
+df.resp <- read.csv("../../data/fractional-c-remaining.csv")
+
+
+df.merge <- merge(df.distances, df.resp, by = c('core.id','incub.trtmt')) %>%
+  subset(incub.trtmt == 'SI') %>%
+  subset(DayFactor == 34) %>%
+  mutate(mass.C.respired = mass.C.remaining.g * (1-fractional.C.remaining))
+
+pBC = ggplot(df.merge, aes(x=BC.distance.btw.burned.and.control, y=k1, color = horizon)) + 
+  geom_point() + 
+  scale_color_manual(values = c('darkgreen','grey70'))+
+  stat_smooth(method=lm,se = FALSE,color='black') +
+  theme_bw() + 
+  #facet_wrap(~horizon, ncol=2,scales = 'fixed',
+   #          labeller = labeller(horizon = HorizonLabels))+
+  labs(y = 'Decay rate constant for \nfast C pool (k1)',
+       x = 'Bray-Curtis dissimilarity \ncompared to unburned control')
+
+
+summary(lm(data=df.merge,k1~BC.distance.btw.burned.and.control))
+
+
+
+
+### Ordination colored by respiration metric:
+# Full ordination
+ps.norm.SI <- prune_samples(sample_data(ps.norm.full)$incub.trtmt =='SI', ps.norm.full)
+ps.norm.SI <- prune_taxa(taxa_sums(ps.norm.SI)>0, ps.norm.SI)
+
+ord.nmds = ordinate(ps.norm.SI,method = "NMDS",ddistance="wunifrac",k=3, weighted=TRUE)
+
+# quick look at results:
+plot_ordination(ps.norm.SI,ord.nmds,color="burn.trtmt",shape="incub.trtmt")
+colnames(sample_data(ps.norm))
+
+
+
+# Ordination plot with horizons and deg.hrs
+p1 = plot_ordination(ps.norm.SI, ord.nmds, axes = c(1,2), color = "",
+                      shape = 'burn.trtmt') + 
+  #facet_grid(~horizon, labeller = labeller(horizon = HorizonLabels))+
+  geom_point(size=3, alpha=0.8) +
+  # scale_color_gradientn(colours = c('gold2','red','red4','black')) +
+  # scale_color_manual(values = c('black','orange','red'),
+  #                    labels = c('Unburned control', 'Wet soil burn','Wry soil burn'),
+  #                    breaks = c('control','wet','dry'))+
+  scale_shape_manual(values = c('circle','square','triangle'),
+                     labels = c('Unburned control', 'Moist soil','Dry soil'),
+                     breaks = c('control','wet','dry')) +
+  #scale_shape_discrete(labels = c('Picea' = 'Picea spp.', 'Populus_tremuloides' = 'Populus tremuloides','Pinus_banksiana' = 'Pinus banksiana')) +
+  #scale_shape_manual(values = c('circle','triangle'),
+   #                  labels = c('O horizon','Mineral'),
+    #                 breaks = c('O','A')) + 
+  theme(legend.text = element_text(size = 12),
+        axis.title = element_text(size=12),
+        axis.text = element_text(size=12),
+        legend.title = element_text(size=12)) + 
+  labs(shape = 'Burn treatment',
+       color = 'Fractional size\nof fast C pool') +
+  theme_bw()
+
+p1
+
+
+
+## What fraction of total reads in dry soil burns 24 hr post burn were bacillus?
+#  Bacillus fire surviving taxa = 8f0e2646c1389192d5a822f62bd295cf, 8adb5559e135233565acfea1287280bf
+df <- read.csv('../../data/sequence-data/LibCombined/corncob-output/Manuscript/Trait-responder-OTUs.csv')
+
+df.bac <- read.csv('../../data/sequence-data/LibCombined/corncob-output/Manuscript/Trait-responder-OTUs.csv') %>%
+  subset(mu.survival.max>0) %>%
+  subset(Genus=='Bacillus')
+  
+ps.norm.bac <- prune_samples(sample_data(ps.norm.gDNA)$incub.trtmt == 'pb', ps.norm.gDNA) 
+ps.norm.bac <- prune_taxa(taxa_names(ps.norm.bac) %in% df.bac$OTU, ps.norm.bac)
+
+bac <- psmelt(ps.norm.bac)
+# Answer 9% (8f0e2646c1389192d5a822f62bd295cf) and 4% (8adb5559e135233565acfea1287280bf) of total reads in dry soil burns
+
+
+### What percentage of all OTUs were identified as fast growers?
+df.fast <- df %>%
+  subset(mu.fast.max>0)
+
+ps.norm.SI <- prune_samples(sample_data(ps.norm.gDNA)$incub.trtmt == 'SI', ps.norm.gDNA) 
+ps.norm.SI <- prune_taxa(taxa_sums(ps.norm.SI)>0, ps.norm.SI)
+ps.norm.SI
+# Answer: IN the 5 week incubation, 0.4%
+
+
+
+### Max relative abundance of responding taxa in lab samples?
+ps.responders <- prune_taxa(taxa_names(ps.norm.gDNA) %in% df$OTU, ps.norm.gDNA)
+df.responders <- psmelt(ps.responders)
+
+df.responders <- df.responders %>%
+  subset(select = c(Sample, Abundance, Full.id,burn.trtmt))
+
+Num.responders <- df.responders %>% group_by(Full.id) %>% mutate(abun = sum(Abundance))
+max(Num.responders$abun) # = 0.604
+
+Num.responders.in.dry <- df.responders %>%
+  subset(burn.trtmt == 'dry') %>% 
+  group_by(Full.id) %>% 
+  mutate(combined.abun = sum(Abundance))
+
+
+mean(Num.responders.in.dry$combined.abun) # = 15
+sd(Num.responders.in.dry$combined.abun) # = 
+
+
+
+
+
+
+```
+
+
+
+
+
 
 # Figure 6: Trade offs
 ```{r}
@@ -1492,11 +1826,13 @@ MyWunifrac_E1 <- distance(ps.E1, method = 'wunifrac')
 MyWunifrac_E1.DNA <- distance(ps.E1.DNA, method = 'wunifrac')
 MyWunifrac_E2 <- distance(ps.E2, method = 'wunifrac')
 MyWunifrac_E3 <- distance(ps.E3, method = 'wunifrac')
+MyWunifrac_All <- distance(ps.norm.gDNA, method = 'wunifrac')
 
 SamDat_E1 = data.frame(sample_data(ps.E1))
 SamDat_E1.DNA = data.frame(sample_data(ps.E1.DNA))
 SamDat_E2 = data.frame(sample_data(ps.E2))
 SamDat_E3 = data.frame(sample_data(ps.E3))
+SamDat_All = data.frame(sample_data(ps.norm.gDNA))
 
 test_E1 <- adonis(MyWunifrac_E1 ~ Veg.type+PRE.hor.thickness.cm+pH+percent.total.C+
                     percent.total.N+texture+burn.trtmt+horizon, data = SamDat_E1)
@@ -1506,10 +1842,13 @@ test_E2 <- adonis(MyWunifrac_E2 ~ Veg.type+PRE.hor.thickness.cm+pH+percent.total
                     percent.total.N+texture+burn.trtmt+horizon, data = SamDat_E2)
 test_E3 <- adonis(MyWunifrac_E3 ~ Veg.type+PRE.hor.thickness.cm+pH+percent.total.C+
                     percent.total.N+texture+burn.trtmt+horizon, data = SamDat_E3)
+test_All <- adonis(MyWunifrac_All ~ incub.trtmt+burn.trtmt+pH+horizon+Veg.type, data = SamDat_All)
+
 test_E1
 test_E1.DNA
 test_E2
 test_E3
+test_All
 
 
 test_E1_sub <- adonis(MyWunifrac_E1.DNA ~ percent.total.N, data = SamDat_E1.DNA)
@@ -1571,6 +1910,13 @@ adonis(MyWunifrac_E3.autoclave ~ horizon, data = SamDat_E3.autoclaving)
 adonis(MyWunifrac_E3.autoclave ~ incub.trtmt, data = SamDat_E3.autoclaving)
 
 
+
+# All
+adonis(MyWunifrac_All ~ Veg.type, data = SamDat_All)
+adonis(MyWunifrac_All ~ pH, data = SamDat_All)
+adonis(MyWunifrac_All ~ incub.trtmt, data = SamDat_All)
+adonis(MyWunifrac_All ~ burn.trtmt, data = SamDat_All)
+adonis(MyWunifrac_All ~ horizon, data = SamDat_All)
 ```
 
 
@@ -1811,6 +2157,87 @@ FIN --------------------------------
 
 EXTRAS:
 
+
+
+# SI: plot responders as fraction of total comm. vs. total C mineralized over 5 week incub.
+```{r}
+### Goal plot with fraction of total comm by trait category vs. total C-CO2 respired after 5 weeks 
+
+# 1. import trait data
+df <- read.csv('../../data/sequence-data/LibCombined/corncob-output/Manuscript/Trait-responder-OTUs.csv')
+head(df)
+
+df$trait = 'TBD'
+
+# assign traits:
+for (i in 1:nrow(df)) {
+  if (is.na(df$mu.fast.max[i]) & is.na(df$mu.affinity.max[i])) {
+    df$trait[i] = 'Survivor' 
+  } else if (is.na(df$mu.survival.max[i]) & is.na(df$mu.affinity.max[i])) {
+    df$trait[i] = 'Fast grower' 
+  } else if (is.na(df$mu.survival.max[i]) & is.na(df$mu.fast.max[i])) {
+    df$trait[i] = 'Affinity taxa' 
+  } else if (is.na(df$mu.survival.max[i])) {
+    df$trait[i] = 'Fast grower and affinity taxa'
+  } else if (is.na(df$mu.affinity.max[i])) {
+    df$trait[i] = 'Survivor and fast grower'
+  } else if (is.na(df$mu.fast.max[i])) {
+    df$trait[i] = 'Survivor and affinity taxa' 
+  } else {
+    df$trait[i] = 'ALL'
+  }
+}
+
+
+
+
+
+# 2. import full comm data at end of SI incubation
+ps.norm.SI <- prune_samples(sample_data(ps.norm.full)$incub.trtmt == 'SI', ps.norm.full)
+
+# 3. Assign traits to OTUs in the SI comm data
+ps.norm.SI <- prune_taxa(taxa_names(ps.norm.SI) %in% df$OTU, ps.norm.SI)
+ps.norm.SI <- prune_taxa(taxa_sums(ps.norm.SI)>0, ps.norm.SI)
+
+df.norm.SI <- psmelt(ps.norm.SI)
+
+df.norm.SI <- merge(df.norm.SI, subset(df, select = c(OTU, trait)))
+
+p = ggplot(df.norm.SI, aes(x=burn.trtmt, y=Abundance)) + 
+  geom_bar(aes(fill=trait), stat='identity', position='stack')
+
+# 4. Import respiration data
+#df.resp <- read.csv("../../data/fractional-c-remaining.csv")
+# df.resp <- df (imported from "incubations_microbial_respiration_TLWcheck.R")
+
+
+# 5. sum total respiration at end of 5 weeks
+df.resp.SI <- subset(df.resp, Incubation.trtmt == 'SI') 
+
+# 6. merge trait and respiration dataframes
+df.sum <- df.norm.SI %>%
+  group_by(Full.id, trait) %>%
+  mutate(trait.abun = sum(Abundance)) %>%
+  subset(select = c(core.id,trait,trait.abun)) %>%
+  unique() %>%
+  merge(df.resp.SI, by = 'core.id')
+
+# 7. plot fraction of total comm vs. total C-CO2 respired
+p = ggplot(subset(df.sum, Day==34), aes(x=trait.abun, y = C.CO2.absorbed.per.g.C)) + 
+  geom_point(aes(color=trait)) + 
+  facet_wrap(~burn.trtmt)+
+  theme_bw() 
+  
+
+p = ggplot(df.sum, aes(x=(1-fractional.C.remaining),y=trait.abun)) + 
+  geom_bar(aes(fill=trait), stat='identity', position='stack') + 
+  theme_bw()
+
+
+# Initial mineralization after 2-7 days
+
+
+```
 
 
 # figuring out corncob + trait assignments

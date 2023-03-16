@@ -63,6 +63,7 @@ coefs.df <- data.frame("core.id.incub" = "sample", "k1" = 0, "k2" = 0, "M1" = 0,
 output.fit.df <- data.frame("core.id" = "sample", 
                             "core.id.incub" = "sample", 
                             'r.squared' = 0,
+                            'pvalue' = 0,
                             "site" = 0,
                             "burn.trtmt" = "trtmt",
                             "t" = 0, 
@@ -101,6 +102,8 @@ for (i in seq_along(names.vec)) {
   
   df.lm <- lm(Mt ~ Mt.fit, data = df.x)
   df.x$r.squared <- summary(df.lm)$r.squared
+  df.x$pvalue <- summary(df.lm)$coef[2,4]
+  
 
   ## summary information on parameter estimates
   coefs <- summary(TwoPool.nls.fit) 
@@ -108,6 +111,7 @@ for (i in seq_along(names.vec)) {
   k2 <- coefs$coefficients[[2]]
   M1 <- coefs$coefficients[[3]]
   M2 <- df.x$Mt[1] - M1
+  pvalue <- df.x$pvalue
   
   coefs.df <- coefs.df %>%
     add_row("core.id.incub" = names.vec[[i]], "k1" = k1, "k2" = k2, "M1" = M1, "M2" = M2)
@@ -151,9 +155,10 @@ names.vec = as.vector(names.vec$core.id.incub)
 # Create an output df to populate with coefficients later
 coefs.df <- data.frame("core.id.incub" = "sample", "k1" = 0, "k2" = 0, "M1" = 0, "M2" = 0)
 
-output.fit.df <- data.frame("core.id" = "sample",
-                            "core.id.incub" = "sample",
-                            "r.squared" = 0,
+output.fit.df <- data.frame("core.id" = "sample", 
+                            "core.id.incub" = "sample", 
+                            'r.squared' = 0,
+                            'pvalue' = 0,
                             "site" = 0,
                             "burn.trtmt" = "trtmt",
                             "t" = 0, 
@@ -182,6 +187,8 @@ for (i in seq_along(names.vec)) {
   
   df.lm <- lm(Mt ~ Mt.fit, data = df.x)
   df.x$r.squared <- summary(df.lm)$r.squared
+  df.x$pvalue <- summary(df.lm)$coef[2,4]
+  
   
   ## summary information on parameter estimates
   coefs <- summary(TwoPool.nls.fit) 
@@ -231,9 +238,10 @@ names.vec = as.vector(names.vec$core.id.incub)
 # Create an output df to populate with coefficients later
 coefs.df <- data.frame("core.id.incub" = "sample", "k1" = 0, "k2" = 0, "M1" = 0, "M2" = 0)
 
-output.fit.df <- data.frame("core.id" = "sample",
-                            "core.id.incub" = "sample",
-                            "r.squared" = 0,
+output.fit.df <- data.frame("core.id" = "sample", 
+                            "core.id.incub" = "sample", 
+                            'r.squared' = 0,
+                            'pvalue' = 0,
                             "site" = 0,
                             "burn.trtmt" = "trtmt",
                             "t" = 0, 
@@ -260,6 +268,7 @@ for (i in seq_along(names.vec)) {
   
   df.lm <- lm(Mt ~ Mt.fit, data = df.x)
   df.x$r.squared <- summary(df.lm)$r.squared
+  df.x$pvalue <- summary(df.lm)$coef[2,4]
   
   ## summary information on parameter estimates
   coefs <- summary(TwoPool.nls.fit) 
@@ -267,6 +276,7 @@ for (i in seq_along(names.vec)) {
   k2 <- coefs$coefficients[[2]]
   M1 <- coefs$coefficients[[3]]
   M2 <- df.x$Mt[1] - M1
+  pvalue <- df.x$pvalue
   
   coefs.df <- coefs.df %>%
     add_row("core.id.incub" = names.vec[[i]], "k1" = k1, "k2" = k2, "M1" = M1, "M2" = M2)

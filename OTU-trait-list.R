@@ -23,7 +23,7 @@ colnames(df.exp1)[7] <- 'experiment'
 
 
 # Experiment 2
-df.exp2 <- read.csv('data/sequence-data/LibCombined/corncob-output/Manuscript/Ex2_signOTUs_3sliding_pH_categories_byBurnTrtmt.csv')
+df.exp2 <- read.csv('data/sequence-data/LibCombined/corncob-output/Manuscript/Ex2_signOTUs_MidThermoCutoff_50C.csv') # DvD, WvW, CvC
 
 # Experiment 3
 df.exp3 <- read.csv('data/sequence-data/LibCombined/corncob-output/Manuscript/Ex3_signOTUs_MidThermoCutoff_50C.csv')
@@ -43,7 +43,7 @@ df.exp2 <- df.exp2 %>%
          mu.cntl.pH = NA)
 
 df.raw.combined <- rbind(df.exp13,df.exp2)
-write.csv(df.raw.combined, 'data/sequence-data/LibCombined/corncob-output/Manuscript/All-responders.csv')
+#write.csv(df.raw.combined, 'data/sequence-data/LibCombined/corncob-output/Manuscript/All-responders.csv')
 
 
 
@@ -90,23 +90,25 @@ df.ratio <- merge(df.DNA.prune, df.RNA.prune, by = c('OTU','core.id.hor.incub'))
 df.survivors <- merge(df.exp1, df.ratio, by = "OTU") %>%
   # Pull out positive responders
   subset(mu.burn.trtmt > 0) %>%
-  #subset(mu.burn.trtmt > mean(mu.burn.trtmt)-1*sd(mu.burn.trtmt)) %>%
   # Remove taxa with an RNA:DNA ratio before [cutoff]
-  subset(max.RNA.DNA.ratio > 0) %>%
+  subset(max.RNA.DNA.ratio > 1) %>%
   # Calculate max mu for each OTU
-  group_by(OTU, horizon) %>%
+  group_by(OTU) %>%
   mutate(mu.survival.max = max(mu.burn.trtmt),
          mu.fast.max = NA,
          mu.affinity.max = NA) %>%
-  subset(select = c(OTU, comparison, experiment, horizon,
-                    Domain, Phylum, Class, Order, Family, Genus, Species, 
-                    mu.survival.max, mu.fast.max, mu.affinity.max,max.RNA.DNA.ratio)) %>% 
+  subset(mu.survival.max > mean(mu.survival.max)-1*sd(mu.survival.max)) %>%
+  subset(select = c(OTU, 
+                    #comparison, experiment,T.cutoff, pH.cutoff,
+                    #Domain, Phylum, Class, Order, Family, Genus, Species,
+                    mu.survival.max, 
+                    #mu.fast.max, mu.affinity.max,
+                    max.RNA.DNA.ratio)) %>%
+  #subset(select = c(OTU,mu.survival.max, max.RNA.DNA.ratio)) %>%
   unique()
 
 # Check for OTUs that are both positive and negative responders
 # Check how number of responders changes with mu > mean(mu)-1*sd(mu)
-
-
 # Number of fire surviving taxa
 dim(df.survivors)
 # Number of unique fire surviving taxa
@@ -118,34 +120,47 @@ length(unique(df.survivors)$OTU)
 ### Step 3. -----
 # Calculate max mu value for each OTU
 df.fast <- df.exp2 %>%
+  #subset(comparison %in% c('pb.dry.vs.SI.dry','pb.wet.vs.SI.wet')) %>%
+  filter(T.cutoff == 'Mid thermo > 50C') %>%
   # Pull out positive responders
   subset(mu.incub.trtmt > 0) %>%
-  #subset(comparison == 'pb.dry.vs.SI.dry') %>%
   #subset(mu.incub.trtmt > mean(mu.incub.trtmt)-1*sd(mu.incub.trtmt)) %>%
-  group_by(OTU,horizon) %>%
+  group_by(OTU) %>%
   mutate(mu.fast.max = max(mu.incub.trtmt),
          mu.survival.max = NA,
          mu.affinity.max = NA,
          max.RNA.DNA.ratio = NA) %>%
-  subset(select = c(OTU, comparison, experiment, horizon,
-                    Domain, Phylum, Class, Order, Family, Genus, Species, 
-                    mu.survival.max, mu.fast.max, mu.affinity.max,max.RNA.DNA.ratio)) %>% 
+  subset(mu.fast.max > mean(mu.fast.max)-1*sd(mu.fast.max)) %>%
+  subset(select = c(OTU, 
+                    #comparison, experiment,T.cutoff, pH.cutoff,
+                    #Domain, Phylum, Class, Order, Family, Genus, Species,mu.survival.max, 
+                    mu.fast.max
+                    #,mu.affinity.max,max.RNA.DNA.ratio
+                    )) %>%
+  #subset(select = c(OTU,mu.fast.max)) %>%
   unique()
+length(unique(df.fast$OTU))
 dim(df.fast)
+head(df.fast,2)
 
 # repeat for third experiment
 df.affinity <- df.exp3 %>%
   # Pull out positive responders
   subset(mu.burn.trtmt > 0) %>%
-  #subset(mu.burn.trtmt > mean(mu.burn.trtmt)-1*sd(mu.burn.trtmt)) %>%
-  group_by(OTU, horizon) %>%
+  group_by(OTU) %>%
   mutate(mu.affinity.max = max(mu.burn.trtmt),
          mu.fast.max = NA,
          mu.survival.max = NA,
          max.RNA.DNA.ratio = NA) %>%
-  subset(select = c(OTU, comparison, experiment, horizon,
-                    Domain, Phylum, Class, Order, Family, Genus, Species, 
-                    mu.survival.max, mu.fast.max, mu.affinity.max, max.RNA.DNA.ratio)) %>% 
+  subset(mu.affinity.max > mean(mu.affinity.max)-1*sd(mu.affinity.max)) %>%
+  subset(select = c(OTU, 
+                    #comparison, experiment,T.cutoff, pH.cutoff,
+                    #Domain, Phylum, Class, Order, Family, Genus, Species,
+                    #mu.survival.max, mu.fast.max, 
+                    mu.affinity.max
+                    #, max.RNA.DNA.ratio
+                    )) %>%
+  # subset(select = c(OTU,mu.affinity.max)) %>%
   unique()
 dim(df.affinity)
 
@@ -154,9 +169,20 @@ df.combined <- rbind(df.survivors, df.fast, df.affinity)
 
 
 
+ps.norm.subset <- prune_taxa(taxa_names(ps.norm.full) %in% c(df.survivors$OTU,df.fast$OTU, df.affinity$OTU),ps.norm.full)
+
+df.norm.subset <- psmelt(ps.norm.subset) %>%
+  subset(select = c(OTU, Domain,Phylum,Class,Order,Family,Genus,Species)) %>%
+  unique()
+
+df.combined <- merge(df.norm.subset, df.survivors, by = 'OTU', all = TRUE) %>%
+  merge(df.fast, by = 'OTU', all=TRUE) %>%
+  merge(df.affinity, by = 'OTU', all=TRUE)
+
 ### Step 4. Save output?
 #write.csv(df.combined, 'data/sequence-data/LibCombined/corncob-output/Manuscript/Trait-responder-OTUs.csv')
-
+#write.csv(df.combined, 'data/sequence-data/LibCombined/corncob-output/Manuscript/Feb9_test.csv')
+#write.csv(df.combined, 'data/sequence-data/LibCombined/corncob-output/Manuscript/Feb9_test_old_fast.csv')
 
 
 
