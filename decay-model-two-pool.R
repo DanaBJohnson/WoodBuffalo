@@ -63,6 +63,7 @@ coefs.df <- data.frame("core.id.incub" = "sample", "k1" = 0, "k2" = 0, "M1" = 0,
 output.fit.df <- data.frame("core.id" = "sample", 
                             "core.id.incub" = "sample", 
                             'r.squared' = 0,
+                            'pvalue' = 0,
                             "site" = 0,
                             "burn.trtmt" = "trtmt",
                             "t" = 0, 
@@ -101,6 +102,8 @@ for (i in seq_along(names.vec)) {
   
   df.lm <- lm(Mt ~ Mt.fit, data = df.x)
   df.x$r.squared <- summary(df.lm)$r.squared
+  df.x$pvalue <- summary(df.lm)$coef[2,4]
+  
 
   ## summary information on parameter estimates
   coefs <- summary(TwoPool.nls.fit) 
@@ -108,6 +111,7 @@ for (i in seq_along(names.vec)) {
   k2 <- coefs$coefficients[[2]]
   M1 <- coefs$coefficients[[3]]
   M2 <- df.x$Mt[1] - M1
+  pvalue <- df.x$pvalue
   
   coefs.df <- coefs.df %>%
     add_row("core.id.incub" = names.vec[[i]], "k1" = k1, "k2" = k2, "M1" = M1, "M2" = M2)
@@ -151,9 +155,10 @@ names.vec = as.vector(names.vec$core.id.incub)
 # Create an output df to populate with coefficients later
 coefs.df <- data.frame("core.id.incub" = "sample", "k1" = 0, "k2" = 0, "M1" = 0, "M2" = 0)
 
-output.fit.df <- data.frame("core.id" = "sample",
-                            "core.id.incub" = "sample",
-                            "r.squared" = 0,
+output.fit.df <- data.frame("core.id" = "sample", 
+                            "core.id.incub" = "sample", 
+                            'r.squared' = 0,
+                            'pvalue' = 0,
                             "site" = 0,
                             "burn.trtmt" = "trtmt",
                             "t" = 0, 
@@ -182,6 +187,8 @@ for (i in seq_along(names.vec)) {
   
   df.lm <- lm(Mt ~ Mt.fit, data = df.x)
   df.x$r.squared <- summary(df.lm)$r.squared
+  df.x$pvalue <- summary(df.lm)$coef[2,4]
+  
   
   ## summary information on parameter estimates
   coefs <- summary(TwoPool.nls.fit) 
@@ -231,9 +238,10 @@ names.vec = as.vector(names.vec$core.id.incub)
 # Create an output df to populate with coefficients later
 coefs.df <- data.frame("core.id.incub" = "sample", "k1" = 0, "k2" = 0, "M1" = 0, "M2" = 0)
 
-output.fit.df <- data.frame("core.id" = "sample",
-                            "core.id.incub" = "sample",
-                            "r.squared" = 0,
+output.fit.df <- data.frame("core.id" = "sample", 
+                            "core.id.incub" = "sample", 
+                            'r.squared' = 0,
+                            'pvalue' = 0,
                             "site" = 0,
                             "burn.trtmt" = "trtmt",
                             "t" = 0, 
@@ -260,6 +268,7 @@ for (i in seq_along(names.vec)) {
   
   df.lm <- lm(Mt ~ Mt.fit, data = df.x)
   df.x$r.squared <- summary(df.lm)$r.squared
+  df.x$pvalue <- summary(df.lm)$coef[2,4]
   
   ## summary information on parameter estimates
   coefs <- summary(TwoPool.nls.fit) 
@@ -267,6 +276,7 @@ for (i in seq_along(names.vec)) {
   k2 <- coefs$coefficients[[2]]
   M1 <- coefs$coefficients[[3]]
   M2 <- df.x$Mt[1] - M1
+  pvalue <- df.x$pvalue
   
   coefs.df <- coefs.df %>%
     add_row("core.id.incub" = names.vec[[i]], "k1" = k1, "k2" = k2, "M1" = M1, "M2" = M2)
@@ -302,106 +312,3 @@ df.rsquared <- df.rsquared %>%
   separate(core.id.incub, c("Year", "Project", "Site", "Core", "incub.trtmt"), sep = "-", remove = FALSE) 
 
 #write.csv(df.rsquared,'../data/2-pool-decay-model-output.csv')
-setwd('../Box/WhitmanLab/Projects/WoodBuffalo/FireSim2019')
-
-df.rsquared <- read.csv('data/2-pool-decay-model-output.csv')
-
-df.coefs <- df.rsquared %>%
-  subset(t == 3) %>%
-  subset(select = c(core.id,incub.trtmt,r.squared,Burn.trtmt,
-                    k1,k2,M1,M2))
-df.fit <- df.rsquared %>%
-  subset(select = c(core.id.incub,Site,Core,incub.trtmt,r.squared,
-                    Burn.trtmt,Mt,Mt.fit))
-  
-# Look at the coefficient dataframe
-hist(df.rsquared$k1,breaks=20)
-hist(df.rsquared$k2,breaks=20)
-hist(df.rsquared$M1,breaks=20)
-hist(df.rsquared$M2,breaks=20)
-
-# Separate incubation treatments
-liwa.inc <- subset(df.rsquared, incub.trtmt == "LIwA")
-lin.inc <- subset(df.rsquared, incub.trtmt == "LIn")
-st.inc <- subset(df.rsquared, incub.trtmt == "SI")
-
-
-#PLOT: Fractional C remaining at one site (13).
-colnames(df.rsquared)
-head(df.rsquared)
-
-
-
-p = ggplot(df.site, aes(x = t, y = Mt, 
-                     color = Burn.trtmt,
-                     shape = incub.trtmt)) + 
-  geom_point() +
-  geom_line(aes(x=t, y = Mt.fit)) +
-  facet_wrap(~Site) +
-  labs(x = "Day", 
-       y = "C remaining as fraction of initial total C",
-       title = "Fractional C remaining during short-term incubation treatments")
-p
-
-
-
-palette = c("black","orange","red3")
-#PLOT: Fractional C remaining during short-term incubation treatments across all sites
-p = ggplot(st.inc, aes(x = t, y = Mt, 
-                       color = Burn.trtmt)) + 
-  geom_point() +
-  scale_color_manual(values = palette,
-                     limits = c('control','wet burn','dry burn'),
-                     labels = c('unburned','wet soil burn','dry soil burn')) +
-  geom_line(aes(x=t, y = Mt.fit)) +
-  facet_wrap(~Site) +
-  theme_bw() +
-  labs(x = "Day", 
-       y = "C remaining as fraction of initial total C",
-       color = 'Burn treatment') + 
-  theme(strip.text.x = element_text(size = 12),
-        strip.text.y = element_text(size = 12),
-        axis.text.y = element_text(size = 12),
-        axis.text.x = element_text(size = 12),
-        axis.title.y = element_text(size = 14, margin = margin(r=20, l=20)),
-        axis.title.x = element_text(size = 14, margin = margin(t=20, b=20)),
-        legend.text = element_text(size=12),
-        legend.title = element_text(size=14))
-p
-
-
-#PLOT: Fractional C remaining during long-term (LIwA) incubation treatments across all sites
-p = ggplot(liwa.inc, aes(x = t, y = Mt, color = Burn.trtmt)) + 
-  geom_point() +
-  geom_line(aes(x=t, y = Mt.fit)) +
-  scale_color_manual(values = palette) +
-  theme_bw()+
-  facet_wrap(~Site) +
-  labs(x = "Day", 
-       y = "C remaining as fraction of initial total C",
-       color = 'Burn treatment') + 
-  theme(strip.text.x = element_text(size = 12),
-        strip.text.y = element_text(size = 12),
-        axis.text.y = element_text(size = 12),
-        axis.text.x = element_text(size = 12),
-        axis.title.y = element_text(size = 14, margin = margin(r=20, l=20)),
-        axis.title.x = element_text(size = 14, margin = margin(t=20, b=20)),
-        legend.text = element_text(size=12),
-        legend.title = element_text(size=14))
-p
-
-
-#PLOT: Fractional C remaining during long-term (LIn) incubation treatments across all sites
-p = ggplot(lin.inc, aes(x = t, y = Mt, color = Burn.trtmt)) + 
-  geom_point() +
-  geom_line(aes(x=t, y = Mt.fit)) +
-  scale_color_manual(values=palette)+
-  facet_wrap(~Site) +
-  theme_bw()+
-  labs(x = "Day", 
-       y = "C remaining as fraction of initial total C",
-       title = "Fractional C remaining during long-term (LIn) incubation treatments")
-p
-
-
-  
