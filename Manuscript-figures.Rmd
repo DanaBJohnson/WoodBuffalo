@@ -471,15 +471,14 @@ See "Merged_paper_figures_Revision_Github.R" script
 # Trait abundance in field data, Figure 4: ----
 See "Merged_paper_figures_Revision_GitHub.R" script
 
-# Rel abundance adjusted by copy num, Figure 5 -----
+# Total trait abun by BC dissimilarity, Figure 5 -----
 See "Merged_paper_figures_Revision_GitHub.R" script
 
-# Total trait abun by BC dissimilarity, Figure 6 -----
-See "Merged_paper_figures_Revision_GitHub.R" script
 
-# Supplementary
+
+#### Extended data figures
 ```{r}
-# Carbon and nitrogen loss, Figure S2 -----
+# Carbon and nitrogen loss, Extended data Figure 1 -----
 pChange_C <- ggplot(subset(df.meta, incub.trtmt == 'SI')) + 
   geom_boxplot(aes(x=burn.trtmt, y = percent.total.C, fill = horizon), alpha = 0.7, varwidth = FALSE) + 
     theme_bw()+
@@ -531,10 +530,18 @@ cowplot::plot_grid(pChange_C, pChange_N, ncol=2)
 test <- aov(percent.total.N ~ burn.trtmt, data = subset(df.meta, incub.trtmt == 'SI' & horizon == 'O'))
 summary(test)
 TukeyHSD(test)
+```
 
-# C remaining as fraction of total, Figure S3, S4 -----
-#   See incubations_microbial_respiration.R
-# Full ordination, Fig. S6 ----
+
+# C remaining as fraction of total, Extended data Figure S2, S3 -----
+See incubations_microbial_respiration.R
+
+# Decay model parameters for post-fire environment affinity incubation, Extended Data Figure 4 -----
+
+XXXX
+
+```{r}
+# Full ordination, Extended Data Figure 5 ----
 ps.full.dataset <-readRDS('../../../CombinedFireSim1519/ps.1519FireSim.merged')
 tree <- ape::read.tree('../../../CombinedFireSim1519/tree/merged-exported-tree/tree.nwk')
 
@@ -608,52 +615,16 @@ p1 = plot_ordination(ps.norm.gDNA, MyNMDS.full.gDNA, axes = c(1,2),
   theme_bw()
 
 p1
+```
 
-# BC dissimilarity and pH change, Figure S7-----
-df.distances <- read.csv('../../data/bray-curtis-dissimilarites.csv')
+# Rel abundance adjusted by weighted mean predicted 16S copy num, Extended Data Figure 6 -----
+See "Merged_paper_figures_Revision_GitHub.R" script
 
-df.distances <- merge(df.distances, subset(df.meta, burn.trtmt != 'control'))    
+# Respiration rate for lab-incubated soils, Extended data Figure 7-----
+See "incubations_microbial_respiration.R" script
 
-df.distances$incub.trtmt <- factor(df.distances$incub.trtmt, levels = c('pb','SI','LIwA','LIn'))
-df.distances$horizon <- factor(df.distances$horizon, levels = c('O','A')) 
- 
-
-# plot: Dry soil burns
-p3=ggplot(subset(df.distances, incub.trtmt == 'LIwA' & burn.trtmt == 'dry'),
-         aes(x=change.pH, y = BC.distance.btw.burned.and.control, color = horizon, shape = horizon)) + 
-  geom_point(size=3, alpha = 0.8) +
-  theme_bw() +
-  facet_wrap(~horizon,ncol=2,
-             labeller = labeller(horizon = HorizonLabels),
-             scales = 'fixed') + 
-  labs(x = expression(Delta~'pH with burning'),
-       y = 'Bray-Curtis dissimilarity \ncompared to control', 
-       color = 'Soil horizon',
-       shape = 'Soil horizon') + 
-  scale_color_manual(values = c("darkgreen","grey70"),
-                     limits = c('O','A'),
-                     labels = c('Organic','Mineral')) +
-  scale_shape_manual(values = c('circle','triangle'),
-                     limits = c('O','A'),
-                     labels = c('Organic','Mineral')) +
-  theme(axis.title.x = element_text(size=14, margin = margin(t=10)),
-        axis.title.y = element_text(size=14, margin = margin(r=10)),
-        axis.text = element_text(size=12),
-        legend.title = element_text(size=14),
-        legend.text = element_text(size=14),
-        strip.text = element_text(size=14),
-        panel.spacing.x = unit(2, "lines"),
-       legend.position = 'right') +
-  stat_smooth(data = subset(df.distances, incub.trtmt == 'LIwA' & burn.trtmt == 'dry' & horizon == 'O'),
-              method=lm,se = FALSE,color='black') +
-    ylim(0,1)
-  
-
-
-# Respiration rate figures, S8, S9, S10-----
-#   See "incubations_microbial_respiration.R" script
-
-# Traits as fraction of total reads in lab data, Figure S11-----
+```{r}
+# Traits as fraction of total reads in lab data, Extended data Figure 8-----
 df <- read.csv('../../data/sequence-data/LibCombined/corncob-output/Manuscript/Trait-responder-OTUs.csv')
 
 ps.responders <- prune_taxa(taxa_names(ps.norm.full) %in% df$OTU, ps.norm.full)
@@ -726,10 +697,55 @@ p_FractionTotal <- ggplot(subset(df.frac.of.total,incub.trtmt!='LIn'), aes(x=hor
        # legend.background = element_rect(fill = "darkgray"),
         legend.box = "vertical")
 
-
-
-
 ```
+
+
+# Extended Data Figure 9, Respiration rates with/without inocubation
+See "incubations_microbial_respiration.R" script
+
+
+#### Supplementary Figure 1 
+```{r}
+# BC dissimilarity and pH change, Supplementary Figure 1 -----
+df.distances <- read.csv('../../data/bray-curtis-dissimilarites.csv')
+
+df.distances <- merge(df.distances, subset(df.meta, burn.trtmt != 'control'))    
+
+df.distances$incub.trtmt <- factor(df.distances$incub.trtmt, levels = c('pb','SI','LIwA','LIn'))
+df.distances$horizon <- factor(df.distances$horizon, levels = c('O','A')) 
+ 
+
+# plot: Dry soil burns
+p3=ggplot(subset(df.distances, incub.trtmt == 'LIwA' & burn.trtmt == 'dry'),
+         aes(x=change.pH, y = BC.distance.btw.burned.and.control, color = horizon, shape = horizon)) + 
+  geom_point(size=3, alpha = 0.8) +
+  theme_bw() +
+  facet_wrap(~horizon,ncol=2,
+             labeller = labeller(horizon = HorizonLabels),
+             scales = 'fixed') + 
+  labs(x = expression(Delta~'pH with burning'),
+       y = 'Bray-Curtis dissimilarity \ncompared to control', 
+       color = 'Soil horizon',
+       shape = 'Soil horizon') + 
+  scale_color_manual(values = c("darkgreen","grey70"),
+                     limits = c('O','A'),
+                     labels = c('Organic','Mineral')) +
+  scale_shape_manual(values = c('circle','triangle'),
+                     limits = c('O','A'),
+                     labels = c('Organic','Mineral')) +
+  theme(axis.title.x = element_text(size=14, margin = margin(t=10)),
+        axis.title.y = element_text(size=14, margin = margin(r=10)),
+        axis.text = element_text(size=12),
+        legend.title = element_text(size=14),
+        legend.text = element_text(size=14),
+        strip.text = element_text(size=14),
+        panel.spacing.x = unit(2, "lines"),
+       legend.position = 'right') +
+  stat_smooth(data = subset(df.distances, incub.trtmt == 'LIwA' & burn.trtmt == 'dry' & horizon == 'O'),
+              method=lm,se = FALSE,color='black') +
+    ylim(0,1)
+```  
+
 
 # PERMANOVAs, Supplementary:
 ```{r}
