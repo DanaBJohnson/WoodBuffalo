@@ -1,4 +1,4 @@
-Scripts for analyzing data associated with "Experimentally-determined traits shape bacterial community composition one and five years following wildfire"
+Scripts for analyzing data associated with "Experimentally determined traits shape bacterial community composition one and five years following wildfire"
  
 corncob-experiment1.R: tests for differentially abundant OTUs in unburned soil vs. soil 24 hrs post-burn using the corncob package (Martin et al. 2020)
 
