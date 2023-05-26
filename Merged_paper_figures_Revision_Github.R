@@ -26,8 +26,19 @@ ps.norm = transform_sample_counts(ps,function(x) x/sum(x))
 sample_data(ps.norm)$Study = sample_data(ps.norm)$Years_Since_Fire
 sample_data(ps.norm)$Study[is.na(sample_data(ps.norm)$Study)]="Lab"
 
+# Drop non-autoclaved lab samples, cDNA, and treed wetland field samples for ordination
+sample_data(ps.norm)$incub.trtmt = ifelse(is.na(sample_data(ps.norm)$incub.trtmt), "field",sample_data(ps.norm)$incub.trtmt)
+sample_data(ps.norm)$DNA.type[is.na(sample_data(ps.norm)$DNA.type)]="gDNA"
+sample_data(ps.norm)$Veg.type = ifelse(is.na(sample_data(ps.norm)$Veg.type), paste(sample_data(ps.norm)$Veg_Comm),sample_data(ps.norm)$Veg.type)
+
+ps.norm = subset_samples(ps.norm,sample_data(ps.norm)$incub.trtmt %in% c("field","SI","LIwA","pb"))
+ps.norm = subset_samples(ps.norm,sample_data(ps.norm)$DNA.type == "gDNA")
+ps.norm = subset_samples(ps.norm,sample_data(ps.norm)$Veg.type != "Treed Wetland")
+ps.norm
+
 # Ordinate plots
 ord.nmds = ordinate(ps.norm,method = "NMDS",distance="bray",k=3, trymax=200)
+ord.nmds
 
 # Making figure for paper
 # Get ordination data
@@ -54,34 +65,25 @@ full.plot$horizon[full.plot$horizon=="M"]="A"
 full.plot$horizon[full.plot$horizon=="A"]="Mineral"
 full.plot$horizon[full.plot$horizon=="O"]="Organic"
 
-# Make veg comm variable same for both sets
-full.plot$Veg.type
-full.plot$Veg.type = ifelse(is.na(full.plot$Veg.type), paste(full.plot$Veg_Comm),full.plot$Veg.type)
-
 # Make new year-agnostic study variable
 full.plot$StudyShape = full.plot$Study
 full.plot$StudyShape[full.plot$StudyShape %in% c("1","5")]="Field"
 
-# Filter dataset to include just 5-week incubation and same veg comms
-full.plot$incub.trtmt = ifelse(is.na(full.plot$incub.trtmt), "field",full.plot$incub.trtmt)
-levels(as.factor(full.plot$incub.trtmt))
-full.plot = data.frame(full.plot) %>%
-          filter(incub.trtmt %in% c("field","SI","LIwA","pb"))%>%
-          filter(Veg.type != "Treed Wetland")
-
-# Keep only DNA
-full.plot$DNA.type[is.na(full.plot$DNA.type)]="gDNA"
-full.plot = full.plot %>%
-  filter(DNA.type == "gDNA")
-
 # Factor horizon variable
 full.plot$horizon <- factor(full.plot$horizon, levels = c('Organic','Mineral'))
 
-x <- full.plot %>%
+# Reformat full plot
+full.plot = data.frame(full.plot)
+
+plot.data <- full.plot %>%
   tidyr::unite(burn.trtmt.hor, c(burn.trtmt,horizon), sep='-', remove = FALSE)
 
+# Save statistical source data Figure 3
+ssd.3 = plot.data[,c("x","y","z","burn.trtmt","burn.trtmt.hor")]
+#write.csv(ssd.3,"../FireSim2019/paper/FinalRevision/Johnson_SourceDSata_Fig3.csv")
+
 # Plot figure showing field and lab samples ordinated together
-p = ggplot(x) + theme_bw()
+p = ggplot(plot.data) + theme_bw()
 p = p + geom_point(aes(x=x,y=y,shape=burn.trtmt.hor,color=burn.trtmt),size=3, alpha=0.7)
 p = p + scale_color_manual(values=c("grey50","orange","red3","grey50","red3"))
 p = p + scale_shape_manual(values=c('field burned-Mineral'=0,
@@ -157,10 +159,18 @@ survivors.lm.coeffs = data.frame(t(c("Intercept"=Intercept,"YSF5"=YSF5,"BSI"=BSI
 Int.1.s=survivors.lm.coeffs$Intercept+survivors.lm.coeffs$BSI*1
 Int.5.s=survivors.lm.coeffs$Intercept+survivors.lm.coeffs$YSF5+survivors.lm.coeffs$BSI*1
 Slope.s=survivors.lm.coeffs$BSI
+Int.1.s
+Int.5.s
+Slope.s
 
 # This should give us the data frame we need to plot
 # Derive the sets of co-ordinates we want to plot and add to our dataset
 mdf.Survivors$LinearFit = survivors.lm.coeffs$Intercept+ifelse(mdf.Survivors$Years_Since_Fire=="5",survivors.lm.coeffs$YSF5,0)+(mdf.Survivors$Burn_Severity_Index)*survivors.lm.coeffs$BSI
+
+# Saving statistical source data
+ssd.4.A = mdf.Survivors[,c("Burn_Severity_Index","TotalAbundance","Org_or_Min","Years_Since_Fire","LinearFit")]
+ssd.4.A$Burn_Severity_Index=ssd.4.A$Burn_Severity_Index-1
+#write.csv(ssd.4.A,"../FireSim2019/paper/FinalRevision/Johnson_SourceData_Fig4A.csv")
 
 # Make plot with linear fits
 p = ggplot(mdf.Survivors)
@@ -221,10 +231,19 @@ FireEnv.lm.coeffs = data.frame(t(c("Intercept"=Intercept,"YSF5"=YSF5,"BSI"=BSI))
 Int.1.fe=FireEnv.lm.coeffs$Intercept+FireEnv.lm.coeffs$BSI*1
 Int.5.fe=FireEnv.lm.coeffs$Intercept+FireEnv.lm.coeffs$YSF5+FireEnv.lm.coeffs$BSI*1
 Slope.fe=FireEnv.lm.coeffs$BSI
+Int.1.fe
+Int.5.fe
+Slope.fe
 
 # This should give us the data frame we need to plot
 # Derive the sets of co-ordinates we want to plot and add to our dataset
 mdf.FireEnv$LinearFit = FireEnv.lm.coeffs$Intercept+ifelse(mdf.FireEnv$Years_Since_Fire=="5",FireEnv.lm.coeffs$YSF5,0)+(mdf.FireEnv$Burn_Severity_Index)*FireEnv.lm.coeffs$BSI
+
+# Saving statistical source data
+ssd.4.C = mdf.FireEnv[,c("Burn_Severity_Index","TotalAbundance","Org_or_Min","Years_Since_Fire","LinearFit")]
+ssd.4.C$Burn_Severity_Index=ssd.4.C$Burn_Severity_Index-1
+#write.csv(ssd.4.C,"../FireSim2019/paper/FinalRevision/Johnson_SourceData_Fig4C.csv")
+
 
 # Plot relative abundance of affinity taxa vs burn severity with linear fits
 p = ggplot(mdf.FireEnv)
@@ -287,15 +306,26 @@ Interaction = Fast.lm$coefficients[4,1]
 Fast.lm.coeffs = data.frame(t(c("Intercept"=Intercept,"YSF5"=YSF5,"BSI"=BSI,"Interaction"=Interaction)))
 
 Int.1.fg=Fast.lm.coeffs$Intercept+Fast.lm.coeffs$BSI*1
-Int.5.fg=Fast.lm.coeffs$Intercept+Fast.lm.coeffs$YSF5+Fast.lm.coeffs$BSI*1
+Int.5.fg=Fast.lm.coeffs$Intercept+Fast.lm.coeffs$YSF5+(Fast.lm.coeffs$BSI+Fast.lm.coeffs$Interaction)*1
 Slope.1.fg=Fast.lm.coeffs$BSI
 Slope.5.fg=Fast.lm.coeffs$BSI+Fast.lm.coeffs$Interaction
+
+Int.1.fg
+Int.5.fg
+Slope.1.fg
+Slope.5.fg
 
 # This should give us the data frame we need to plot
 # Derive the sets of co-ordinates we want to plot and add to our dataset
 mdf.Fast$LinearFit = Fast.lm.coeffs$Intercept + 
   ifelse(mdf.Fast$Years_Since_Fire=="5",Fast.lm.coeffs$YSF5,0) +
   mdf.Fast$Burn_Severity_Index*ifelse(mdf.Fast$Years_Since_Fire=="5",Fast.lm.coeffs$BSI+Fast.lm.coeffs$Interaction,Fast.lm.coeffs$BSI)
+
+# Saving statistical source data
+ssd.4.B = mdf.Fast[,c("Burn_Severity_Index","TotalAbundance","Org_or_Min","Years_Since_Fire","LinearFit")]
+ssd.4.B$Burn_Severity_Index=ssd.4.B$Burn_Severity_Index-1
+#write.csv(ssd.4.B,"../FireSim2019/paper/FinalRevision/Johnson_SourceData_Fig4B.csv")
+
 
 # Plot relative abundance of fast growers vs BSI and linear fits
 p = ggplot(mdf.Fast)
@@ -358,11 +388,11 @@ ResponderSummarySamplesHighBSI = mdf %>%
   summarize(TotalAbundance=sum(Abundance))
 head(ResponderSummarySamples)
 
-# Mean and sd 1-year post-fire
+# Mean and sd 1-year post-fire for high BSI
 mean(ResponderSummarySamplesHighBSI[ResponderSummarySamplesHighBSI$Years_Since_Fire==1,]$TotalAbundance)
 sd(ResponderSummarySamplesHighBSI[ResponderSummarySamplesHighBSI$Years_Since_Fire==1,]$TotalAbundance)
 
-# Mean and sd 5-year post-fire
+# Mean and sd 5-year post-firefor high BSI
 mean(ResponderSummarySamplesHighBSI[ResponderSummarySamplesHighBSI$Years_Since_Fire==5,]$TotalAbundance)
 sd(ResponderSummarySamplesHighBSI[ResponderSummarySamplesHighBSI$Years_Since_Fire==5,]$TotalAbundance)
 
@@ -421,7 +451,7 @@ df = mdf.RDP %>%
   dplyr::group_by(Sample)%>%
   dplyr::mutate(AdjAbund = WtAbund/sum(WtAbund))%>%
   dplyr::mutate(WtCopyNum = CopyNum*AdjAbund)%>%
-  dplyr::group_by(Sample,Years_Since_Fire,Burn_Severity_Index,Org_or_Min)%>%
+  dplyr::group_by(Sample,Years_Since_Fire,Burn_Severity_Index,Org_or_Min,Veg_Comm)%>%
   dplyr::summarize(WtMeanCopyNum = sum(WtCopyNum,na.rm=TRUE))
 hist(df$WtMeanCopyNum)
 sum(is.na(df$WtMeanCopyNum))
@@ -512,6 +542,10 @@ df.RDP.plot = df.RDP.plot%>%
   filter(Years_Since_Fire==1)%>%
   filter(Veg_Comm %in% c("Jack Pine","Mixedwood","Black Spruce"))
 
+# Saving statistical source data
+ssd.ED6 = df.RDP.plot[,c("WtMeanCopyNum","TotalAbundanceRDP","Org_or_Min")]
+#write.csv(ssd.ED6,"../FireSim2019/paper/FinalRevision/Johnson_SourceData_FigED6.csv")
+
 ### rrnDB Result Plot, accounting for 16S copy number in relabund ###
 p = ggplot(df.RDP.plot)
 p = p + geom_point(aes(x=WtMeanCopyNum,y=TotalAbundanceRDP,shape=Org_or_Min,colour=Org_or_Min), size=2)
@@ -547,8 +581,7 @@ p = p + geom_abline(aes(intercept=Intercept,slope=Slope))
 p
 
 ## Final figure
-
-
+fast.vs.copynum.stats 
 
 ##############################
 # We also want to compare BC-dissim for burned vs. unburned (same veg)
@@ -657,6 +690,12 @@ p
 # Linear model
 summary(lm(data=FinalMatch,TotalAbundance~Years_Since_Fire*MeanBCDissimToUnburned))
 
+# Checking N
+Enns.FinalMatch = FinalMatch %>%
+  group_by(Years_Since_Fire,Org_or_Min)%>%
+  summarize(N=n())
+Enns.FinalMatch
+
 # Ensure years since fire is categorical
 FinalMatch$Years_Since_Fire <- as.character(FinalMatch$Years_Since_Fire)
 
@@ -680,6 +719,10 @@ BC.lm.coeffs
 FinalMatch$LinearFit = BC.lm.coeffs$Intercept + 
   ifelse(FinalMatch$Years_Since_Fire=="5",BC.lm.coeffs$YSF5,0) +
   FinalMatch$MeanBCDissimToUnburned*ifelse(FinalMatch$Years_Since_Fire=="5",BC.lm.coeffs$BC+BC.lm.coeffs$Interaction,BC.lm.coeffs$BC)
+
+# Saving statistical source data
+ssd.5 = FinalMatch[,c("MeanBCDissimToUnburned","TotalAbundance","Org_or_Min", "Years_Since_Fire","LinearFit")]
+#write.csv(ssd.5,"../FireSim2019/paper/FinalRevision/Johnson_SourceData_Fig5.csv")
 
 # Add lines to plot
 p = ggplot(FinalMatch,aes(x=MeanBCDissimToUnburned,y=TotalAbundance))
